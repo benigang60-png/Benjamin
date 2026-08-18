@@ -7,17 +7,21 @@
 - پنل ادمین در پیوی (فعال‌سازی با ارسال 1212)
 - پیام همگانی، تنظیم لینک گروه، مدیریت بازی‌ها، روشن/خاموش کردن هوش مصنوعی
 - سیستم کاربران داستان‌دار + درخواست «کاربر اصلی شدن»
-- ۱۱ بازی گروهی: دوز، سنگ‌کاغذقیچی، حدس عدد، تاس شانس، شیر یا خط،
-  حدس کلمه (دار)، کوییز اطلاعات عمومی، ریاضی سریع، این یا اون، حدس اموجی، بلک‌جک
-- چت هوش مصنوعی با گراک (GPT-OSS-120B) + مدیریت خطای موقتی + ری‌ت لیمیت
+- ۲۰ بازی گروهی: دوز، سنگ‌کاغذقیچی، حدس عدد، تاس شانس، شیر یا خط،
+  حدس کلمه، کوییز، ریاضی سریع، این یا اون، حدس اموجی، بلک‌جک،
+  حروف به‌هم‌ریخته، چیستان، تایپ سریع، حدس پرچم، زنجیره کلمات،
+  ضرب‌المثل، حافظه، رنگ سریع، کلمه در دسته
+- کوییز / حدس کلمه / اموجی / چیستان و بقیه با GPT-OSS-20B ساخته می‌شن تا تکراری نباشن
+- چت هوش مصنوعی با گراک (GPT-OSS-120B) + چرخش چند کلید هنگام ریت‌لیمیت
 
 نحوه اجرا:
     pip install -r requirements.txt
-    python bot.py
+    python bot-1.py
 """
 
 import os
 import re
+import json
 import time
 import random
 import string
@@ -49,25 +53,50 @@ from telegram.ext import (
 # تنظیمات (Config)
 # ============================================================================
 
-# ترجیحاً این دو مقدار رو به‌جای هاردکد، از متغیرهای محیطی (Environment Variables) بخون
-# تا توکن‌ها داخل کد ذخیره نشن. اگه متغیر محیطی ست نشده باشه، از مقدار پیش‌فرض زیر استفاده می‌شه.
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "8750717991:AAHPqBuR-qrPSjE4RnfA21o12-6qRTk2LmI")
-GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "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")
 
-# مدل و endpoint گراک (سازگار با فرمت OpenAI)
-GROQ_MODEL = "openai/gpt-oss-120b"
+
+def _collect_groq_keys():
+    """کلیدها از محیط یا فایل groq_keys.txt خونده می‌شن تا تو گیت لو نرن."""
+    keys = []
+    env_multi = os.environ.get("GROQ_API_KEYS", "")
+    if env_multi:
+        keys.extend(k.strip() for k in re.split(r"[,\s]+", env_multi) if k.strip())
+    env_one = os.environ.get("GROQ_API_KEY", "")
+    if env_one:
+        keys.append(env_one.strip())
+    keys_file = os.environ.get("GROQ_KEYS_FILE", os.path.join(os.path.dirname(__file__) or ".", "groq_keys.txt"))
+    try:
+        with open(keys_file, "r", encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if line and not line.startswith("#") and line.startswith("gsk_"):
+                    keys.append(line)
+    except FileNotFoundError:
+        pass
+    seen, out = set(), []
+    for k in keys:
+        if k and k not in seen:
+            seen.add(k)
+            out.append(k)
+    return out
+
+
+GROQ_API_KEYS = _collect_groq_keys()
+GROQ_API_KEY = GROQ_API_KEYS[0] if GROQ_API_KEYS else ""
+
+GROQ_CHAT_MODEL = "openai/gpt-oss-120b"
+GROQ_GAME_MODEL = "openai/gpt-oss-20b"
+GROQ_MODEL = GROQ_CHAT_MODEL
 GROQ_API_BASE = "https://api.groq.com/openai/v1/chat/completions"
+GROQ_KEY_COOLDOWN_DEFAULT = 60
 
-# فاصله‌ی زمانی مجاز بین دو پیام هر کاربر به هوش مصنوعی (ثانیه)
 AI_RATE_LIMIT_SECONDS = 15
-# حداقل فاصله‌ی زمانی بین هر دو پاسخ هوش مصنوعی توی کل گروه (صرف‌نظر از اینکه کاربرش کیه).
-# این جلوی اینه که چند نفر مختلف همزمان ریپلای بزنن و چندین کال گرون‌قیمت پشت‌سرهم شلیک بشه.
 AI_GROUP_COOLDOWN_SECONDS = 5
-# سقف طول پاسخ هوش مصنوعی؛ هرچی کمتر، هزینه‌ی هر کال کمتر (برای چت گروهی معمولی کافیه)
 AI_MAX_OUTPUT_TOKENS = 1024
 
 DB_PATH = os.environ.get("BOT_DB_PATH", "bot_data.db")
-ADMIN_PASSCODE = "1212"  # کد فعال‌سازی پنل ادمین در پیوی
+ADMIN_PASSCODE = "1212"
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
@@ -75,7 +104,6 @@ logging.basicConfig(
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logger = logging.getLogger("group_bot")
 
-# بازی‌های قابل‌پشتیبانی. کلید = شناسه‌ی داخلی، مقادیر = متادیتا
 GAMES = {
     "tictactoe": {"trigger": "دوز", "title": "دوز (سه در سه)", "min": 2, "max": 2},
     "rps": {"trigger": "سنگ کاغذ قیچی", "title": "سنگ کاغذ قیچی", "min": 2, "max": 2},
@@ -88,6 +116,15 @@ GAMES = {
     "wyr": {"trigger": "این یا اون", "title": "این یا اون", "min": 1, "max": None},
     "emoji": {"trigger": "حدس اموجی", "title": "حدس اموجی", "min": 1, "max": None},
     "bj": {"trigger": "بلک جک", "title": "بلک جک (مقابل دیلر)", "min": 1, "max": None},
+    "scramble": {"trigger": "حروف به هم ریخته", "title": "حروف به‌هم‌ریخته", "min": 1, "max": None},
+    "riddle": {"trigger": "چیستان", "title": "چیستان", "min": 1, "max": None},
+    "typerace": {"trigger": "تایپ سریع", "title": "تایپ سریع", "min": 1, "max": None},
+    "flag": {"trigger": "حدس پرچم", "title": "حدس پرچم", "min": 1, "max": None},
+    "chain": {"trigger": "زنجیره کلمات", "title": "زنجیره کلمات", "min": 1, "max": None},
+    "proverb": {"trigger": "ضرب المثل", "title": "ضرب‌المثل", "min": 1, "max": None},
+    "memory": {"trigger": "حافظه", "title": "حافظه تصویری", "min": 1, "max": None},
+    "colors": {"trigger": "رنگ سریع", "title": "رنگ سریع", "min": 1, "max": None},
+    "category": {"trigger": "کلمه در دسته", "title": "کلمه در دسته", "min": 1, "max": None},
 }
 TRIGGER_TO_GAME = {meta["trigger"]: key for key, meta in GAMES.items()}
 
@@ -234,29 +271,31 @@ def get_ai_system_prompt() -> str:
 db_init()
 
 # ============================================================================
-# وضعیت درون‌حافظه‌ای (In-memory state)
+# وضعیت درون‌حافظه‌ای
 # ============================================================================
 
-# چالش‌های درحال‌انتظار بازی‌های دو نفره: session_id -> dict
 PENDING_CHALLENGES = {}
-# بازی‌های درحال اجرا: session_id -> dict
 ACTIVE_GAMES = {}
-# بازی‌های حدس عدد (بدون محدودیت نفر) به ازای هر گروه: chat_id -> dict
 GUESS_GAMES = {}
-# بازی‌های حدس کلمه/دار به ازای هر گروه: chat_id -> dict
 HANGMAN_GAMES = {}
-# کوییز اطلاعات عمومی درحال اجرا: session_id -> dict
 TRIVIA_GAMES = {}
-# ریاضی سریع به ازای هر گروه: chat_id -> dict
 MATH_GAMES = {}
-# این یا اون درحال اجرا: session_id -> dict
 WYR_GAMES = {}
-# حدس اموجی به ازای هر گروه: chat_id -> dict
 EMOJI_GAMES = {}
-# بلک‌جک‌های درحال اجرا (هر کاربر جدا): session_id -> dict
 BLACKJACK_GAMES = {}
-
-# ---- بانک محتوای بازی‌ها ----
+SCRAMBLE_GAMES = {}
+RIDDLE_GAMES = {}
+TYPERACE_GAMES = {}
+FLAG_GAMES = {}
+CHAIN_GAMES = {}
+PROVERB_GAMES = {}
+MEMORY_GAMES = {}
+COLOR_GAMES = {}
+CATEGORY_GAMES = {}
+RECENT_CONTENT = {}
+AI_LAST_USED = {}
+AI_GROUP_LAST_USED = {}
+AI_HISTORY = {}
 
 HANGMAN_WORDS = [
     ("گربه", "حیوانات"), ("فیل", "حیوانات"), ("زرافه", "حیوانات"), ("پروانه", "حیوانات"),
@@ -266,8 +305,12 @@ HANGMAN_WORDS = [
     ("ایران", "کشورها"), ("ژاپن", "کشورها"), ("برزیل", "کشورها"), ("مصر", "کشورها"),
     ("کتاب", "اشیا"), ("چتر", "اشیا"), ("دوچرخه", "اشیا"), ("عینک", "اشیا"),
     ("گیتار", "اشیا"), ("ساعت", "اشیا"), ("آینه", "اشیا"), ("چراغ", "اشیا"),
-    ("دریا", "طبیعت"), ("کوهستان", "طبیعت"), ("رنگین‌کمان", "طبیعت"), ("آبشار", "طبیعت"),
+    ("دریا", "طبیعت"), ("کوهستان", "طبیعت"), ("رنگینکمان", "طبیعت"), ("آبشار", "طبیعت"),
     ("فوتبال", "ورزش"), ("والیبال", "ورزش"), ("شطرنج", "ورزش"), ("کشتی", "ورزش"),
+    ("کامپیوتر", "تکنولوژی"), ("اینترنت", "تکنولوژی"), ("موبایل", "تکنولوژی"),
+    ("تهران", "شهرها"), ("شیراز", "شهرها"), ("اصفهان", "شهرها"), ("تبریز", "شهرها"),
+    ("خورشید", "آسمان"), ("ستاره", "آسمان"), ("کهکشان", "آسمان"),
+    ("نقاش", "شغل"), ("پزشک", "شغل"), ("معلم", "شغل"), ("آشپز", "شغل"),
 ]
 
 TRIVIA_QUESTIONS = [
@@ -291,6 +334,11 @@ TRIVIA_QUESTIONS = [
     {"q": "المپیک تابستانی هر چند سال برگزار می‌شود؟", "options": ["۲", "۳", "۴", "۵"], "answer": 2, "cat": "ورزش"},
     {"q": "پایتخت ایران کجاست؟", "options": ["اصفهان", "تبریز", "تهران", "شیراز"], "answer": 2, "cat": "جغرافیا"},
     {"q": "کدام گاز بیشترین حجم هوای کره‌ی زمین را تشکیل می‌دهد؟", "options": ["اکسیژن", "نیتروژن", "دی‌اکسید کربن", "هیدروژن"], "answer": 1, "cat": "علمی"},
+    {"q": "نویسنده رمان بوف کور کیست؟", "options": ["هدایت", "آل‌احمد", "دانشور", "گلشیری"], "answer": 0, "cat": "ادبیات"},
+    {"q": "واحد پول ترکیه چیست؟", "options": ["لیر", "دینار", "درهم", "روپیه"], "answer": 0, "cat": "عمومی"},
+    {"q": "کدام سیاره حلقه‌های معروف دارد؟", "options": ["مریخ", "زهره", "زحل", "عطارد"], "answer": 2, "cat": "علمی"},
+    {"q": "پایتخت کانادا کجاست؟", "options": ["تورنتو", "اتاوا", "ونکوور", "مونترال"], "answer": 1, "cat": "جغرافیا"},
+    {"q": "حافظ از شاعران کدام شهر است؟", "options": ["تبریز", "مشهد", "شیراز", "یزد"], "answer": 2, "cat": "فرهنگ"},
 ]
 
 WYR_QUESTIONS = [
@@ -309,6 +357,9 @@ WYR_QUESTIONS = [
     ("صد سال توی گذشته زندگی کنی", "صد سال توی آینده زندگی کنی"),
     ("هر روز صبح زود بیدار بشی", "هر شب خیلی دیر بخوابی"),
     ("بتونی زمان رو متوقف کنی", "بتونی زمان رو برگردونی"),
+    ("همیشه خوش‌شانس باشی ولی گمنام", "معروف باشی ولی بدشانس"),
+    ("فقط بتونی آواز بخونی", "فقط بتونی برقصی"),
+    ("یه ابرقهرمان باشی", "یه شرور باهوش باشی"),
 ]
 
 EMOJI_RIDDLES = [
@@ -318,26 +369,148 @@ EMOJI_RIDDLES = [
     ("🏠🎈", "بالا"),
     ("🐠🔍", "در جستجوی نمو"),
     ("🚢💔🧊", "تایتانیک"),
-    ("👽📞🏠", "ای‌تی"),
+    ("👽📞🏠", "ای تی"),
     ("🦖🏝️", "پارک ژوراسیک"),
-    ("🐝🎬", "فیلم زنبور"),
     ("👦🪄⚡", "هری پاتر"),
-    ("🍫🏭", "چارلی و کارخانه‌ی شکلات‌سازی"),
+    ("🍫🏭", "چارلی و کارخانه شکلات"),
     ("🐭🧀", "موش و پنیر"),
     ("🌧️☂️😢", "روز بارونی"),
     ("🔥🐉", "اژدها"),
-    ("🌙⭐️😴", "شب بخیر"),
+    ("🌙⭐😴", "شب بخیر"),
+    ("🍎📱", "آیفون"),
+    ("☕📖", "کتابخونه"),
+    ("🎹🎶", "پیانو"),
 ]
-# آخرین زمان چت هر کاربر با هوش مصنوعی: user_id -> timestamp
-AI_LAST_USED = {}
-# آخرین زمانی که هوش مصنوعی توی هر گروه جواب داده: chat_id -> timestamp
-AI_GROUP_LAST_USED = {}
-# حافظه‌ی کوتاه مکالمه‌ی هوش مصنوعی هر کاربر (فقط در حافظه، ری‌استارت پاکش می‌کنه)
-AI_HISTORY = {}
+
+FLAG_RIDDLES = [
+    ("🇫🇷", "فرانسه"), ("🇯🇵", "ژاپن"), ("🇩🇪", "آلمان"), ("🇮🇹", "ایتالیا"),
+    ("🇧🇷", "برزیل"), ("🇮🇷", "ایران"), ("🇹🇷", "ترکیه"), ("🇮🇳", "هند"),
+    ("🇨🇦", "کانادا"), ("🇬🇧", "انگلیس"), ("🇺🇸", "آمریکا"), ("🇪🇸", "اسپانیا"),
+    ("🇰🇷", "کره جنوبی"), ("🇨🇳", "چین"), ("🇷🇺", "روسیه"), ("🇪🇬", "مصر"),
+    ("🇬🇷", "یونان"), ("🇲🇽", "مکزیک"), ("🇦🇺", "استرالیا"), ("🇳🇱", "هلند"),
+    ("🇸🇪", "سوئد"), ("🇨🇭", "سوئیس"), ("🇦🇷", "آرژانتین"), ("🇵🇹", "پرتغال"),
+]
+
+PROVERBS = [
+    ("سالی که نکوست از بهارش پیداست", "سالی که نکوست از", "بهارش پیداست"),
+    ("کار نیکو کردن از پر کردن است", "کار نیکو کردن از", "پر کردن است"),
+    ("باد آورده را باد میبرد", "باد آورده را", "باد میبرد"),
+    ("از این ستون به آن ستون فرج است", "از این ستون به آن ستون", "فرج است"),
+    ("جوجه را آخر پاییز میشمارند", "جوجه را آخر پاییز", "میشمارند"),
+    ("هر که بامش بیش برفش بیشتر", "هر که بامش بیش", "برفش بیشتر"),
+    ("دیوار موش دارد موش هم گوش دارد", "دیوار موش دارد", "موش هم گوش دارد"),
+    ("با یک گل بهار نمیشود", "با یک گل", "بهار نمیشود"),
+    ("عاقبت جوینده یابنده است", "عاقبت جوینده", "یابنده است"),
+    ("گر صبر کنی ز غوره حلوا سازی", "گر صبر کنی ز غوره", "حلوا سازی"),
+]
+
+RIDDLES_BANK = [
+    ("بالا میرود ولی هرگز پایین نمیآید. چیست؟", "سن", ["سن", "عمر"]),
+    ("همیشه جلو میرود ولی هیچوقت جا عوض نمیکند. چیست؟", "ساعت", ["ساعت"]),
+    ("بدون اینکه حرف بزند، حرف میزند. چیست؟", "کتاب", ["کتاب"]),
+    ("هرچه از آن برداری بزرگتر میشود. چیست؟", "چاله", ["چاله", "گودال"]),
+    ("خانه دارد ولی در ندارد. چیست؟", "قارچ", ["قارچ"]),
+]
+
+TYPERACE_PHRASES = [
+    "گربه روی دیوار نشست",
+    "امروز هوا خیلی قشنگه",
+    "چای داغ با شکر کم",
+    "فوتبال بدون تماشاچی معنی نداره",
+    "کتابخونه جای آرومیه",
+    "قایق روی دریاچه حرکت کرد",
+    "شب یلدا بلندترین شب ساله",
+    "هوش مصنوعی داره بازی میسازه",
+]
+
+CATEGORY_BANK = [
+    {"category": "میوه", "accepted": ["سیب", "موز", "انگور", "هلو", "گلابی", "انار", "هندوانه", "طالبی", "کیوی", "پرتقال", "نارنگی", "آلبالو", "گیلاس", "توت", "انجیر"]},
+    {"category": "حیوان", "accepted": ["گربه", "سگ", "اسب", "شیر", "ببر", "فیل", "زرافه", "گرگ", "روباه", "خرس", "گاو", "گوسفند", "مرغ", "اردک", "ماهی"]},
+    {"category": "رنگ", "accepted": ["قرمز", "آبی", "سبز", "زرد", "مشکی", "سفید", "نارنجی", "بنفش", "صورتی", "قهوه ای", "خاکستری", "طلایی"]},
+    {"category": "کشور", "accepted": ["ایران", "آلمان", "فرانسه", "ایتالیا", "ژاپن", "چین", "هند", "برزیل", "ترکیه", "مصر", "کانادا", "روسیه", "اسپانیا"]},
+    {"category": "ورزش", "accepted": ["فوتبال", "والیبال", "بسکتبال", "تنیس", "شنا", "کشتی", "جودو", "بوکس", "شطرنج", "دوچرخه", "دو"]},
+]
+
+COLOR_CHOICES = [("قرمز", "🔴"), ("سبز", "🟢"), ("آبی", "🔵"), ("زرد", "🟡")]
+MEMORY_EMOJIS = ["🍎", "🍌", "🍇", "🍉", "🍓", "🍒", "🥝", "🍍", "🥑", "🍑", "🍋", "🥥"]
+_FA_DIGITS = str.maketrans("۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩", "01234567890123456789")
+HANGMAN_STAGES = ["🙂", "😐", "😟", "😨", "😰", "💀"]
+TRIVIA_LETTERS = ["A", "B", "C", "D"]
+RPS_BEATS = {"سنگ": "قیچی", "کاغذ": "سنگ", "قیچی": "کاغذ"}
+CARD_RANKS = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"]
+CARD_SUITS = ["♠️", "♥️", "♦️", "♣️"]
 
 
 def new_session_id() -> str:
     return "".join(random.choices(string.ascii_lowercase + string.digits, k=8))
+
+
+def parse_int(text: str):
+    if text is None:
+        return None
+    cleaned = text.strip().translate(_FA_DIGITS)
+    if cleaned.isdigit():
+        return int(cleaned)
+    return None
+
+
+def _normalize_fa(text: str) -> str:
+    t = (text or "").strip().replace("ي", "ی").replace("ك", "ک").replace("ة", "ه")
+    t = t.replace("‌", "").replace("  ", " ").lower()
+    return t
+
+
+def _clean_word(text: str) -> str:
+    return re.sub(r"\s+", "", _normalize_fa(text))
+
+
+def remember_content(kind: str, value: str, limit: int = 40):
+    rec = RECENT_CONTENT.setdefault(kind, [])
+    rec.append(value)
+    RECENT_CONTENT[kind] = rec[-limit:]
+
+
+def pick_unused(items, key_fn, recent_key: str):
+    recent = set(RECENT_CONTENT.get(recent_key, []))
+    unused = [x for x in items if key_fn(x) not in recent]
+    choice = random.choice(unused or items)
+    remember_content(recent_key, key_fn(choice))
+    return choice
+
+
+class GroqKeyPool:
+    """چرخش کلیدها: تا وقتی کلید فعلی سالمه همونو می‌زنیم؛ با 429 می‌ریم بعدی."""
+
+    def __init__(self, keys):
+        self.keys = list(keys)
+        self.index = 0
+        self.cooldown_until = [0.0] * len(self.keys)
+
+    def pick(self):
+        if not self.keys:
+            return -1, ""
+        now = time.time()
+        n = len(self.keys)
+        for i in range(n):
+            idx = (self.index + i) % n
+            if now >= self.cooldown_until[idx]:
+                self.index = idx
+                return idx, self.keys[idx]
+        idx = min(range(n), key=lambda i: self.cooldown_until[i])
+        self.index = idx
+        return idx, self.keys[idx]
+
+    def mark_limited(self, idx: int, seconds: int = GROQ_KEY_COOLDOWN_DEFAULT):
+        if 0 <= idx < len(self.keys):
+            self.cooldown_until[idx] = time.time() + max(5, int(seconds))
+            self.index = (idx + 1) % len(self.keys)
+
+    def mark_ok(self, idx: int):
+        if 0 <= idx < len(self.keys):
+            self.index = idx
+
+
+KEY_POOL = GroqKeyPool(GROQ_API_KEYS)
 
 
 # ============================================================================
@@ -346,13 +519,6 @@ def new_session_id() -> str:
 
 
 async def safe_reply(update: Update, context: ContextTypes.DEFAULT_TYPE, text: str, **kwargs):
-    """
-    مثل update.message.reply_text ولی اگه پیام اصلی پاک شده باشه (مثلاً یه ربات
-    پاک‌کننده‌ی دیگه یا خود کاربر پیامش رو حذف کرده باشه) و خطای
-    «Message to be replied not found» بگیریم، به‌جاش پیام رو معمولی
-    (بدون ریپلای) توی همون چت می‌فرستیم، تا کارکرد ربات به‌خاطر یه پیام
-    پاک‌شده متوقف نشه.
-    """
     try:
         return await update.message.reply_text(text, **kwargs)
     except BadRequest as e:
@@ -360,6 +526,23 @@ async def safe_reply(update: Update, context: ContextTypes.DEFAULT_TYPE, text: s
             logger.warning("safe_reply: پیام اصلی پیدا نشد، بدون ریپلای فرستاده شد.")
             return await context.bot.send_message(update.effective_chat.id, text, **kwargs)
         raise
+
+
+async def safe_edit(query, text: str, **kwargs):
+    try:
+        return await query.edit_message_text(text, **kwargs)
+    except BadRequest as e:
+        msg = str(e).lower()
+        if "not modified" in msg or "not found" in msg or "message to edit" in msg:
+            return None
+        raise
+
+
+async def safe_answer(query, *args, **kwargs):
+    try:
+        return await query.answer(*args, **kwargs)
+    except Exception:
+        return None
 
 
 async def is_owner(update: Update) -> bool:
@@ -404,77 +587,172 @@ def stories_admin_menu() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(rows)
 
 
+def skip_kb(prefix: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([[InlineKeyboardButton("⏭️ رد شدن / لو دادن", callback_data=prefix)]])
+
+
 # ============================================================================
-# هوش مصنوعی (Groq — GPT-OSS-120B)
+# هوش مصنوعی (Groq — چرخش کلید + مدل بازی)
 # ============================================================================
 
 
-async def _call_groq_once(client: httpx.AsyncClient, payload: dict):
-    """
-    یک تلاش برای صدا زدن GPT-OSS-120B روی گراک.
-    خروجی: (متن پاسخ یا None, کد وضعیت یا None برای خطای شبکه)
-    """
-    headers = {"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"}
+def _key_tail(key: str) -> str:
+    return key[-4:] if key and len(key) >= 4 else "????"
+
+
+def _parse_retry_after(resp) -> int:
+    ra = (resp.headers.get("retry-after") or "").strip()
+    if ra.isdigit():
+        return max(5, min(int(ra), 600))
+    return GROQ_KEY_COOLDOWN_DEFAULT
+
+
+async def _call_groq_once(client: httpx.AsyncClient, payload: dict, api_key: str):
+    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
     try:
         resp = await client.post(GROQ_API_BASE, json=payload, headers=headers)
     except Exception as e:
         logger.warning("Groq: خطای شبکه — %s", e)
-        return None, None
+        return None, None, None
 
     if resp.status_code != 200:
-        logger.warning("Groq: خطای %s — %s", resp.status_code, resp.text[:200])
-        return None, resp.status_code
+        retry_after = _parse_retry_after(resp) if resp.status_code == 429 else None
+        logger.warning(
+            "Groq: خطای %s کلید ...%s — %s",
+            resp.status_code,
+            _key_tail(api_key),
+            (resp.text or "")[:180],
+        )
+        return None, resp.status_code, retry_after
 
     data = resp.json()
     choices = data.get("choices") or []
     if not choices:
         logger.warning("Groq: پاسخ بدون choices")
-        return None, resp.status_code
+        return None, resp.status_code, None
 
     message = choices[0].get("message", {}) or {}
     text = (message.get("content") or "").strip()
-    # بعضی وقتا مدل‌های استدلالی زنجیره‌ی فکرشونو توی <think> برمی‌گردونن؛ حذفش می‌کنیم
     text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
     if not text:
         logger.warning("Groq: متن پاسخ خالی بود")
-        return None, resp.status_code
-    return text, resp.status_code
+        return None, resp.status_code, None
+    return text, resp.status_code, None
 
 
-async def ask_groq(system_prompt: str, history: list, user_text: str):
-    """
-    صدا زدن GPT-OSS-120B روی گراک، با تحمل خطای موقتی:
-    - وضعیت 503 یا خطای شبکه => یک بار با کمی تاخیر دوباره امتحان می‌شه (چون معمولاً موقتیه).
-    - وضعیت 429 (rate limit) یا هر خطای دیگه => بلافاصله None برمی‌گرده.
-    history: لیستی از dict به شکل {"role": "user"/"model", "text": "..."}
-    خروجی: (پاسخ متنی یا None، نام مدلی که جواب داد یا None)
-    """
+async def _call_groq_rotating(client: httpx.AsyncClient, payload: dict):
+    if not KEY_POOL.keys:
+        return None
+    n = len(KEY_POOL.keys)
+    for _ in range(n):
+        idx, key = KEY_POOL.pick()
+        if not key:
+            return None
+        text, status, retry_after = await _call_groq_once(client, payload, key)
+        if text:
+            KEY_POOL.mark_ok(idx)
+            return text
+        if status == 429:
+            KEY_POOL.mark_limited(idx, retry_after or GROQ_KEY_COOLDOWN_DEFAULT)
+            logger.info("Groq: کلید ...%s ریت‌لیمیت شد، می‌رم سراغ بعدی", _key_tail(key))
+            continue
+        if status in (401, 403):
+            KEY_POOL.mark_limited(idx, 3600)
+            continue
+        if status == 503 or status is None:
+            await asyncio.sleep(1.2)
+            text, status, retry_after = await _call_groq_once(client, payload, key)
+            if text:
+                KEY_POOL.mark_ok(idx)
+                return text
+            if status == 429:
+                KEY_POOL.mark_limited(idx, retry_after or GROQ_KEY_COOLDOWN_DEFAULT)
+            else:
+                KEY_POOL.mark_limited(idx, 15)
+            continue
+        break
+    return None
+
+
+async def ask_groq(
+    system_prompt: str,
+    history: list,
+    user_text: str,
+    *,
+    model: str = None,
+    models=None,
+    max_tokens: int = None,
+    temperature: float = 0.7,
+    timeout: float = 30,
+):
     messages = [{"role": "system", "content": system_prompt}]
-    for turn in history[-8:]:
+    for turn in (history or [])[-8:]:
         role = "assistant" if turn["role"] == "model" else "user"
         messages.append({"role": role, "content": turn["text"]})
     messages.append({"role": "user", "content": user_text})
 
-    payload = {
-        "model": GROQ_MODEL,
-        "messages": messages,
-        "temperature": 0.7,
-        "max_tokens": AI_MAX_OUTPUT_TOKENS,
-    }
+    model_list = list(models) if models else [model or GROQ_CHAT_MODEL]
+    seen, uniq = set(), []
+    for m in model_list:
+        if m and m not in seen:
+            seen.add(m)
+            uniq.append(m)
 
-    async with httpx.AsyncClient(timeout=30) as client:
-        text, status = await _call_groq_once(client, payload)
-        if text:
-            return text, GROQ_MODEL
-
-        # وضعیت 503 یا خطای شبکه (status=None) معمولاً موقتیه؛ یک‌بار دیگه امتحان کن
-        if status == 503 or status is None:
-            await asyncio.sleep(2)
-            text, status = await _call_groq_once(client, payload)
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        for used_model in uniq:
+            payload = {
+                "model": used_model,
+                "messages": messages,
+                "temperature": temperature,
+                "max_tokens": max_tokens or AI_MAX_OUTPUT_TOKENS,
+            }
+            text = await _call_groq_rotating(client, payload)
             if text:
-                return text, GROQ_MODEL
-
+                return text, used_model
     return None, None
+
+
+def extract_json_obj(text: str):
+    if not text:
+        return None
+    cleaned = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
+    match = re.search(r"\{.*\}", cleaned, flags=re.DOTALL)
+    if not match:
+        return None
+    blob = match.group(0)
+    try:
+        data = json.loads(blob)
+        return data if isinstance(data, dict) else None
+    except json.JSONDecodeError:
+        try:
+            data = json.loads(blob.replace("'", '"'))
+            return data if isinstance(data, dict) else None
+        except json.JSONDecodeError:
+            return None
+
+
+async def generate_game_json(user_prompt: str):
+    system = (
+        "تو سازنده‌ی محتوای بازی گروهی هستی. فقط یک شیء JSON معتبر برگردان. "
+        "بدون توضیح، بدون مارک‌داون، بدون متن اضافه."
+    )
+    text, _ = await ask_groq(
+        system,
+        [],
+        user_prompt,
+        models=[GROQ_GAME_MODEL, GROQ_CHAT_MODEL],
+        max_tokens=350,
+        temperature=1.05,
+        timeout=18,
+    )
+    return extract_json_obj(text)
+
+
+def _recent_hint(kind: str) -> str:
+    rec = RECENT_CONTENT.get(kind) or []
+    if not rec:
+        return ""
+    return "از این موارد دوری کن: " + " | ".join(rec[-8:])
 
 
 # ============================================================================
@@ -539,7 +817,6 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await safe_reply(update, context, text, reply_markup=kb)
         return
 
-    # داخل گروه
     if not in_linked_group(chat.id):
         return
     title = get_setting("group_title", chat.title or "این گروه")
@@ -568,7 +845,7 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 # ============================================================================
-# روتر پیام‌های خصوصی (کد ادمین + مراحل چندمرحله‌ای)
+# روتر پیام‌های خصوصی
 # ============================================================================
 
 
@@ -581,13 +858,12 @@ async def private_passcode(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await safe_reply(update, context, "پنل ادمین 👇", reply_markup=admin_main_menu())
     elif owner == user.id:
         await safe_reply(update, context, "پنل ادمین 👇", reply_markup=admin_main_menu())
-    # اگه شخص دیگه‌ای بفرسته، هیچ واکنشی نشون نمی‌دیم (برای امنیت)
 
 
 async def private_text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     if user.id != get_owner_id():
-        return  # فقط ادمین جریان‌های چندمرحله‌ای داره
+        return
     awaiting = context.user_data.get("awaiting")
     if not awaiting:
         return
@@ -645,35 +921,35 @@ async def admin_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     data = query.data
     if update.effective_user.id != get_owner_id():
-        await query.answer("این بخش فقط برای ادمین ربات در دسترسه.", show_alert=True)
+        await safe_answer(query, "این بخش فقط برای ادمین ربات در دسترسه.", show_alert=True)
         return
-    await query.answer()
+    await safe_answer(query)
 
     if data == "adm:back":
-        await query.edit_message_text("پنل ادمین 👇", reply_markup=admin_main_menu())
+        await safe_edit(query, "پنل ادمین 👇", reply_markup=admin_main_menu())
 
     elif data == "adm:broadcast":
         context.user_data["awaiting"] = "broadcast"
-        await query.edit_message_text("متن پیام همگانی رو بفرست تا توی گروه ارسال بشه:")
+        await safe_edit(query, "متن پیام همگانی رو بفرست تا توی گروه ارسال بشه:")
 
     elif data == "adm:setlink":
         context.user_data["awaiting"] = "setlink"
-        await query.edit_message_text("لینک دعوت گروه رو بفرست:")
+        await safe_edit(query, "لینک دعوت گروه رو بفرست:")
 
     elif data == "adm:games":
-        await query.edit_message_text("مدیریت بازی‌ها 👇", reply_markup=games_menu())
+        await safe_edit(query, "مدیریت بازی‌ها 👇", reply_markup=games_menu())
 
     elif data.startswith("adm:togglegame:"):
         key = data.split(":")[2]
         toggle_game(key)
-        await query.edit_message_text("مدیریت بازی‌ها 👇", reply_markup=games_menu())
+        await safe_edit(query, "مدیریت بازی‌ها 👇", reply_markup=games_menu())
 
     elif data == "adm:toggle_ai":
         set_setting("ai_enabled", "0" if is_ai_enabled() else "1")
-        await query.edit_message_text("پنل ادمین 👇", reply_markup=admin_main_menu())
+        await safe_edit(query, "پنل ادمین 👇", reply_markup=admin_main_menu())
 
     elif data == "adm:stories":
-        await query.edit_message_text("کاربران داستان‌دار 👇", reply_markup=stories_admin_menu())
+        await safe_edit(query, "کاربران داستان‌دار 👇", reply_markup=stories_admin_menu())
 
     elif data.startswith("adm:storyview:"):
         uid = int(data.split(":")[2])
@@ -682,35 +958,36 @@ async def admin_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
             [InlineKeyboardButton("🗑 حذف این کاربر", callback_data=f"adm:storydel:{uid}")],
             [InlineKeyboardButton("🔙 بازگشت", callback_data="adm:stories")],
         ]
-        await query.edit_message_text(f"داستان کاربر {uid}:\n\n{story}", reply_markup=InlineKeyboardMarkup(rows))
+        await safe_edit(query, f"داستان کاربر {uid}:\n\n{story}", reply_markup=InlineKeyboardMarkup(rows))
 
     elif data.startswith("adm:storydel:"):
         uid = int(data.split(":")[2])
         delete_story(uid)
-        await query.edit_message_text("کاربران داستان‌دار 👇", reply_markup=stories_admin_menu())
+        await safe_edit(query, "کاربران داستان‌دار 👇", reply_markup=stories_admin_menu())
 
     elif data == "adm:storynew":
         context.user_data["awaiting"] = "story_new_id"
-        await query.edit_message_text("آیدی عددی (User ID) کاربر مورد نظر رو بفرست:")
+        await safe_edit(query, "آیدی عددی (User ID) کاربر مورد نظر رو بفرست:")
 
     elif data == "adm:addprompt":
         context.user_data["awaiting"] = "addprompt"
-        await query.edit_message_text(
+        await safe_edit(
+            query,
             "دستور یا شخصیتی که می‌خوای برای همیشه به هوش مصنوعی اضافه بشه رو بفرست.\n"
-            "مثال: «تو اسمت جعفره»"
+            "مثال: «تو اسمت جعفره»",
         )
 
     elif data == "adm:requests":
         reqs = list_story_requests()
         if not reqs:
             rows = [[InlineKeyboardButton("🔙 بازگشت", callback_data="adm:back")]]
-            await query.edit_message_text("درخواستی در انتظار نیست.", reply_markup=InlineKeyboardMarkup(rows))
+            await safe_edit(query, "درخواستی در انتظار نیست.", reply_markup=InlineKeyboardMarkup(rows))
             return
         rows = []
         for uid, name, uname in reqs:
             rows.append([InlineKeyboardButton(f"👤 {name}", callback_data=f"adm:reqview:{uid}")])
         rows.append([InlineKeyboardButton("🔙 بازگشت", callback_data="adm:back")])
-        await query.edit_message_text("درخواست‌های کاربر اصلی شدن 👇", reply_markup=InlineKeyboardMarkup(rows))
+        await safe_edit(query, "درخواست‌های کاربر اصلی شدن 👇", reply_markup=InlineKeyboardMarkup(rows))
 
     elif data.startswith("adm:reqview:"):
         uid = int(data.split(":")[2])
@@ -724,8 +1001,10 @@ async def admin_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
             [InlineKeyboardButton("❌ رد درخواست", callback_data=f"adm:reqreject:{uid}")],
             [InlineKeyboardButton("🔙 بازگشت", callback_data="adm:requests")],
         ]
-        await query.edit_message_text(
-            f"درخواست از طرف: {name} (@{uname or '---'})\nآیدی: {uid}", reply_markup=InlineKeyboardMarkup(rows)
+        await safe_edit(
+            query,
+            f"درخواست از طرف: {name} (@{uname or '---'})\nآیدی: {uid}",
+            reply_markup=InlineKeyboardMarkup(rows),
         )
 
     elif data.startswith("adm:reqapprove:"):
@@ -739,16 +1018,16 @@ async def admin_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "username": row[1] if row else "",
         }
         context.user_data["awaiting"] = "story_approve_text"
-        await query.edit_message_text("متن داستان این کاربر رو بنویس:")
+        await safe_edit(query, "متن داستان این کاربر رو بنویس:")
 
     elif data.startswith("adm:reqreject:"):
         uid = int(data.split(":")[2])
         reject_story_request(uid)
-        await query.edit_message_text("درخواست رد شد.", reply_markup=admin_main_menu())
+        await safe_edit(query, "درخواست رد شد.", reply_markup=admin_main_menu())
 
 
 # ============================================================================
-# کال‌بک‌های داخل گروه (داستان‌ها / درخواست کاربر اصلی)
+# کال‌بک‌های داخل گروه
 # ============================================================================
 
 
@@ -759,38 +1038,38 @@ async def group_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
 
     if not in_linked_group(chat.id):
-        await query.answer()
+        await safe_answer(query)
         return
 
     if data == "grp:stories":
         stories = list_stories()
         if not stories:
-            await query.answer("فعلاً کاربر داستان‌داری نداریم.", show_alert=True)
+            await safe_answer(query, "فعلاً کاربر داستان‌داری نداریم.", show_alert=True)
             return
         rows = [[InlineKeyboardButton(f"👤 {name}", callback_data=f"grp:storyview:{uid}")] for uid, name, _ in stories]
         rows.append([InlineKeyboardButton("🔙 بستن", callback_data="grp:close")])
-        await query.answer()
+        await safe_answer(query)
         await context.bot.send_message(chat.id, "لیست کاربران داستان‌دار 👇", reply_markup=InlineKeyboardMarkup(rows))
 
     elif data.startswith("grp:storyview:"):
         uid = int(data.split(":")[2])
         story = get_story(uid) or "داستانی ثبت نشده."
-        await query.answer()
+        await safe_answer(query)
         await context.bot.send_message(chat.id, story)
 
     elif data == "grp:close":
-        await query.answer()
+        await safe_answer(query)
 
     elif data == "grp:reqmain":
         remember_user(user)
         if get_story(user.id) is not None:
-            await query.answer("شما همین الان هم کاربر داستان‌دار هستید! ⭐️", show_alert=True)
+            await safe_answer(query, "شما همین الان هم کاربر داستان‌دار هستید! ⭐️", show_alert=True)
             return
         added = add_story_request(user.id, user.full_name, user.username or "")
         if not added:
-            await query.answer("درخواست شما قبلاً ثبت شده، صبر کن ادمین بررسی کنه.", show_alert=True)
+            await safe_answer(query, "درخواست شما قبلاً ثبت شده، صبر کن ادمین بررسی کنه.", show_alert=True)
             return
-        await query.answer("درخواست شما ثبت شد ✅", show_alert=True)
+        await safe_answer(query, "درخواست شما ثبت شد ✅", show_alert=True)
         owner = get_owner_id()
         if owner:
             rows = [
@@ -822,34 +1101,34 @@ async def game_trigger_handler(update: Update, context: ContextTypes.DEFAULT_TYP
         return
     if not is_game_enabled(key):
         await safe_reply(update, context, "این بازی الان توسط ادمین غیرفعال شده.")
-        return
+        raise ApplicationHandlerStop
 
     user = update.effective_user
     remember_user(user)
 
-    if key == "guess":
-        await start_guess_game(update, context)
-        return
-    if key == "hangman":
-        await start_hangman_game(update, context)
-        return
-    if key == "trivia":
-        await start_trivia_game(update, context)
-        return
-    if key == "math":
-        await start_math_game(update, context)
-        return
-    if key == "wyr":
-        await start_wyr_game(update, context)
-        return
-    if key == "emoji":
-        await start_emoji_game(update, context)
-        return
-    if key == "bj":
-        await start_blackjack_game(update, context)
-        return
+    starters = {
+        "guess": start_guess_game,
+        "hangman": start_hangman_game,
+        "trivia": start_trivia_game,
+        "math": start_math_game,
+        "wyr": start_wyr_game,
+        "emoji": start_emoji_game,
+        "bj": start_blackjack_game,
+        "scramble": start_scramble_game,
+        "riddle": start_riddle_game,
+        "typerace": start_typerace_game,
+        "flag": start_flag_game,
+        "chain": start_chain_game,
+        "proverb": start_proverb_game,
+        "memory": start_memory_game,
+        "colors": start_color_game,
+        "category": start_category_game,
+    }
+    starter = starters.get(key)
+    if starter:
+        await starter(update, context)
+        raise ApplicationHandlerStop
 
-    # بازی‌های دو نفره: ساخت چالش با دکمه‌ی «قبول چالش»
     session_id = new_session_id()
     PENDING_CHALLENGES[session_id] = {
         "game": key,
@@ -858,10 +1137,13 @@ async def game_trigger_handler(update: Update, context: ContextTypes.DEFAULT_TYP
         "chat_id": chat.id,
     }
     kb = InlineKeyboardMarkup([[InlineKeyboardButton("⚔️ قبول چالش", callback_data=f"join:{session_id}")]])
-    await safe_reply(update, context, 
+    await safe_reply(
+        update,
+        context,
         f"🎮 {user.full_name} دنبال حریف برای «{GAMES[key]['title']}» می‌گرده!\nکی قبول می‌کنه؟",
         reply_markup=kb,
     )
+    raise ApplicationHandlerStop
 
 
 async def game_join_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -869,11 +1151,11 @@ async def game_join_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
     session_id = query.data.split(":")[1]
     challenge = PENDING_CHALLENGES.get(session_id)
     if not challenge:
-        await query.answer("این چالش دیگه معتبر نیست.", show_alert=True)
+        await safe_answer(query, "این چالش دیگه معتبر نیست.", show_alert=True)
         return
     user = update.effective_user
     if user.id == challenge["initiator"]:
-        await query.answer("نمی‌تونی با خودت بازی کنی! یکی دیگه باید قبول کنه.", show_alert=True)
+        await safe_answer(query, "نمی‌تونی با خودت بازی کنی! یکی دیگه باید قبول کنه.", show_alert=True)
         return
 
     del PENDING_CHALLENGES[session_id]
@@ -888,8 +1170,9 @@ async def game_join_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
             "names": {challenge["initiator"]: challenge["initiator_name"], user.id: user.full_name},
             "turn": challenge["initiator"],
         }
-        await query.answer()
-        await query.edit_message_text(
+        await safe_answer(query)
+        await safe_edit(
+            query,
             f"دوز شروع شد! ❌ {challenge['initiator_name']} در برابر ⭕️ {user.full_name}\nنوبت: {challenge['initiator_name']} (❌)",
             reply_markup=render_ttt_board(session_id),
         )
@@ -900,7 +1183,7 @@ async def game_join_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
             "names": {challenge["initiator"]: challenge["initiator_name"], user.id: user.full_name},
             "choices": {},
         }
-        await query.answer()
+        await safe_answer(query)
         kb = InlineKeyboardMarkup(
             [
                 [
@@ -910,7 +1193,8 @@ async def game_join_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 ]
             ]
         )
-        await query.edit_message_text(
+        await safe_edit(
+            query,
             f"سنگ‌کاغذقیچی شروع شد بین {challenge['initiator_name']} و {user.full_name}!\nهر دو نفر مخفیانه انتخاب کنید 👇",
             reply_markup=kb,
         )
@@ -921,9 +1205,10 @@ async def game_join_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
             "names": {challenge["initiator"]: challenge["initiator_name"], user.id: user.full_name},
             "rolls": {},
         }
-        await query.answer()
+        await safe_answer(query)
         kb = InlineKeyboardMarkup([[InlineKeyboardButton("🎲 رول کن", callback_data=f"dd:{session_id}:roll")]])
-        await query.edit_message_text(
+        await safe_edit(
+            query,
             f"تاس شانس شروع شد بین {challenge['initiator_name']} و {user.full_name}!\nهر دو نفر تاس بریزید، بیشترین عدد می‌بره 👇",
             reply_markup=kb,
         )
@@ -934,14 +1219,12 @@ async def game_join_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
         winner_id = p1 if sides[p1] == result else p2
         winner_name = challenge["initiator_name"] if winner_id == p1 else user.full_name
         emoji = "🦁" if result == "شیر" else "🪙"
-        await query.answer()
-        await query.edit_message_text(
+        await safe_answer(query)
+        await safe_edit(
+            query,
             f"شیر یا خط: {challenge['initiator_name']} = شیر 🦁 | {user.full_name} = خط 🪙\n\n"
-            f"سکه چرخید... {emoji} {result} اومد!\n\n🏆 {winner_name} برنده شد!"
+            f"سکه چرخید... {emoji} {result} اومد!\n\n🏆 {winner_name} برنده شد!",
         )
-
-
-# ---- دوز (Tic Tac Toe) ----
 
 
 def check_ttt_winner(board):
@@ -978,30 +1261,30 @@ async def ttt_move_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     idx = int(idx)
     game = ACTIVE_GAMES.get(session_id)
     if not game:
-        await query.answer("این بازی تموم شده.", show_alert=True)
+        await safe_answer(query, "این بازی تموم شده.", show_alert=True)
         return
     user = update.effective_user
     if user.id not in game["players"]:
-        await query.answer("این بازی برای شما نیست.", show_alert=True)
+        await safe_answer(query, "این بازی برای شما نیست.", show_alert=True)
         return
     if user.id != game["turn"]:
-        await query.answer("نوبت شما نیست، صبر کن.", show_alert=True)
+        await safe_answer(query, "نوبت شما نیست، صبر کن.", show_alert=True)
         return
     if game["board"][idx]:
-        await query.answer("این خونه پره!", show_alert=True)
+        await safe_answer(query, "این خونه پره!", show_alert=True)
         return
 
     game["board"][idx] = game["players"][user.id]
     winner = check_ttt_winner(game["board"])
-    await query.answer()
+    await safe_answer(query)
 
     if winner == "draw":
-        await query.edit_message_text("🤝 بازی مساوی شد!", reply_markup=render_ttt_board(session_id))
+        await safe_edit(query, "🤝 بازی مساوی شد!", reply_markup=render_ttt_board(session_id))
         del ACTIVE_GAMES[session_id]
         return
     if winner:
         winner_name = game["names"][user.id]
-        await query.edit_message_text(f"🏆 {winner_name} برنده شد!", reply_markup=render_ttt_board(session_id))
+        await safe_edit(query, f"🏆 {winner_name} برنده شد!", reply_markup=render_ttt_board(session_id))
         del ACTIVE_GAMES[session_id]
         return
 
@@ -1009,12 +1292,7 @@ async def ttt_move_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     game["turn"] = other
     turn_name = game["names"][other]
     turn_symbol = game["players"][other]
-    await query.edit_message_text(f"نوبت: {turn_name} ({turn_symbol})", reply_markup=render_ttt_board(session_id))
-
-
-# ---- سنگ کاغذ قیچی ----
-
-RPS_BEATS = {"سنگ": "قیچی", "کاغذ": "سنگ", "قیچی": "کاغذ"}
+    await safe_edit(query, f"نوبت: {turn_name} ({turn_symbol})", reply_markup=render_ttt_board(session_id))
 
 
 async def rps_choice_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1022,18 +1300,18 @@ async def rps_choice_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
     _, session_id, choice = query.data.split(":")
     game = ACTIVE_GAMES.get(session_id)
     if not game:
-        await query.answer("این بازی تموم شده.", show_alert=True)
+        await safe_answer(query, "این بازی تموم شده.", show_alert=True)
         return
     user = update.effective_user
     if user.id not in game["players"]:
-        await query.answer("این بازی برای شما نیست.", show_alert=True)
+        await safe_answer(query, "این بازی برای شما نیست.", show_alert=True)
         return
     if user.id in game["choices"]:
-        await query.answer("انتخابت قبلاً ثبت شده، منتظر حریف باش.", show_alert=True)
+        await safe_answer(query, "انتخابت قبلاً ثبت شده، منتظر حریف باش.", show_alert=True)
         return
 
     game["choices"][user.id] = choice
-    await query.answer("انتخابت ثبت شد ✅ منتظر حریف باش.")
+    await safe_answer(query, "انتخابت ثبت شد ✅ منتظر حریف باش.")
 
     if len(game["choices"]) < 2:
         return
@@ -1048,11 +1326,8 @@ async def rps_choice_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
     else:
         result = f"🏆 {n2} برنده شد!"
 
-    await query.edit_message_text(f"{n1} انتخاب کرد: {c1}\n{n2} انتخاب کرد: {c2}\n\n{result}")
+    await safe_edit(query, f"{n1} انتخاب کرد: {c1}\n{n2} انتخاب کرد: {c2}\n\n{result}")
     del ACTIVE_GAMES[session_id]
-
-
-# ---- تاس شانس ----
 
 
 async def dice_duel_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1060,18 +1335,18 @@ async def dice_duel_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
     _, session_id, _ = query.data.split(":")
     game = ACTIVE_GAMES.get(session_id)
     if not game:
-        await query.answer("این بازی تموم شده.", show_alert=True)
+        await safe_answer(query, "این بازی تموم شده.", show_alert=True)
         return
     user = update.effective_user
     if user.id not in game["players"]:
-        await query.answer("این بازی برای شما نیست.", show_alert=True)
+        await safe_answer(query, "این بازی برای شما نیست.", show_alert=True)
         return
     if user.id in game["rolls"]:
-        await query.answer("قبلاً رول کردی، منتظر حریف باش.", show_alert=True)
+        await safe_answer(query, "قبلاً رول کردی، منتظر حریف باش.", show_alert=True)
         return
 
     game["rolls"][user.id] = random.randint(1, 6)
-    await query.answer(f"🎲 عدد تو: {game['rolls'][user.id]}")
+    await safe_answer(query, f"🎲 عدد تو: {game['rolls'][user.id]}")
 
     if len(game["rolls"]) < 2:
         return
@@ -1083,15 +1358,12 @@ async def dice_duel_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
     if r1 == r2:
         game["rolls"] = {}
         kb = InlineKeyboardMarkup([[InlineKeyboardButton("🎲 رول کن (تساوی، دوباره)", callback_data=f"dd:{session_id}:roll")]])
-        await query.edit_message_text(f"{n1} 🎲 {r1}  |  {n2} 🎲 {r2}\n\n🤝 تساوی شد! دوباره رول کنید.", reply_markup=kb)
+        await safe_edit(query, f"{n1} 🎲 {r1}  |  {n2} 🎲 {r2}\n\n🤝 تساوی شد! دوباره رول کنید.", reply_markup=kb)
         return
 
     winner = n1 if r1 > r2 else n2
-    await query.edit_message_text(f"{n1} 🎲 {r1}  |  {n2} 🎲 {r2}\n\n🏆 {winner} برنده شد!")
+    await safe_edit(query, f"{n1} 🎲 {r1}  |  {n2} 🎲 {r2}\n\n🏆 {winner} برنده شد!")
     del ACTIVE_GAMES[session_id]
-
-
-# ---- حدس عدد (بدون محدودیت نفرات) ----
 
 
 async def start_guess_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1101,48 +1373,6 @@ async def start_guess_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     GUESS_GAMES[chat_id] = {"number": random.randint(1, 100), "low": 1, "high": 100}
     await safe_reply(update, context, "🎲 بازی حدس عدد شروع شد! یه عدد بین ۱ تا ۱۰۰ حدس بزن (فقط با فرستادن عدد توی گروه).")
-
-
-async def guess_number_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """
-    یک هندلر واحد برای پیام‌های فقط‌رقمی توی گروه: هم حدس عدد رو مدیریت می‌کنه
-    هم جواب‌های ریاضی سریع رو، چون هر دو روی همون فیلتر regex ^\\d+$ ثبت شدن.
-    """
-    chat = update.effective_chat
-    if not in_linked_group(chat.id):
-        return
-
-    value = int(update.message.text.strip())
-    user = update.effective_user
-
-    math_game = MATH_GAMES.get(chat.id)
-    if math_game is not None and is_game_enabled("math"):
-        remember_user(user)
-        if value == math_game["answer"]:
-            await safe_reply(
-                update, context,
-                f"🎉 {user.full_name} درست جواب داد! {math_game['question']} = {math_game['answer']}",
-            )
-            del MATH_GAMES[chat.id]
-        return
-
-    game = GUESS_GAMES.get(chat.id)
-    if not game:
-        return
-    if not is_game_enabled("guess"):
-        return
-    remember_user(user)
-
-    if value == game["number"]:
-        await safe_reply(update, context, f"🎉 {user.full_name} درست حدس زد! عدد {game['number']} بود.")
-        del GUESS_GAMES[chat.id]
-    elif value < game["number"]:
-        await safe_reply(update, context, "⬆️ بزرگ‌تره!")
-    else:
-        await safe_reply(update, context, "⬇️ کوچیک‌تره!")
-
-
-# ---- ریاضی سریع ----
 
 
 async def start_math_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1165,11 +1395,6 @@ async def start_math_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await safe_reply(update, context, f"🧮 ریاضی سریع! {question} = ?\n(فقط جواب رو به‌صورت عدد بفرست)")
 
 
-# ---- حدس کلمه (دار) ----
-
-HANGMAN_STAGES = ["🙂", "😐", "😟", "😨", "😰", "💀"]
-
-
 def render_hangman_word(game) -> str:
     return " ".join(ch if ch in game["guessed"] else "▫️" for ch in game["word"])
 
@@ -1179,61 +1404,93 @@ async def start_hangman_game(update: Update, context: ContextTypes.DEFAULT_TYPE)
     if chat_id in HANGMAN_GAMES:
         game = HANGMAN_GAMES[chat_id]
         await safe_reply(
-            update, context,
+            update,
+            context,
             f"یک بازی حدس کلمه همین الان فعاله ({game['category']}):\n{render_hangman_word(game)}\nحرف بعدی رو بفرست 👇",
         )
         return
-    word, category = random.choice(HANGMAN_WORDS)
-    HANGMAN_GAMES[chat_id] = {"word": word, "category": category, "guessed": set(), "wrong": 0, "wrong_letters": []}
-    kb = InlineKeyboardMarkup([[InlineKeyboardButton("🏳️ لو دادن کلمه", callback_data="hg:reveal")]])
-    await safe_reply(
-        update, context,
-        f"🔤 حدس کلمه شروع شد! (دسته: {category})\n{render_hangman_word(HANGMAN_GAMES[chat_id])}\n"
-        "یک حرف فارسی بفرست تا حدس بزنی 👇",
-        reply_markup=kb,
+
+    wait = await safe_reply(update, context, "⏳ دارم یه کلمه‌ی تازه می‌سازم...")
+    word, category = None, None
+    data = await generate_game_json(
+        "یک کلمه‌ی فارسی یک‌تکه برای بازی دار بساز. ۳ تا ۸ حرف، بدون فاصله و عدد و نیم‌فاصله. "
+        f"{_recent_hint('hangman')} "
+        'JSON: {"word":"گربه","category":"حیوانات"}'
     )
+    if data:
+        cand = _clean_word(str(data.get("word") or ""))
+        if 3 <= len(cand) <= 10 and re.fullmatch(r"[آاأإءؤئبیپتثجچحخدذرزژسشصضطظعغفقکگلمنوهی]+", cand):
+            word, category = cand, str(data.get("category") or "عمومی")[:20]
+
+    if not word:
+        pair = pick_unused(HANGMAN_WORDS, lambda x: x[0], "hangman")
+        word, category = pair
+    else:
+        remember_content("hangman", word)
+
+    HANGMAN_GAMES[chat_id] = {
+        "word": word,
+        "category": category,
+        "guessed": set(),
+        "wrong": 0,
+        "wrong_letters": [],
+    }
+    text = (
+        f"🔤 حدس کلمه شروع شد! (دسته: {category})\n{render_hangman_word(HANGMAN_GAMES[chat_id])}\n"
+        "یک حرف فارسی بفرست، یا کل کلمه رو یکجا حدس بزن 👇"
+    )
+    try:
+        await wait.edit_text(text, reply_markup=skip_kb("hg:reveal"))
+    except Exception:
+        await safe_reply(update, context, text, reply_markup=skip_kb("hg:reveal"))
 
 
-async def hangman_letter_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat = update.effective_chat
-    if not in_linked_group(chat.id):
-        return
-    game = HANGMAN_GAMES.get(chat.id)
-    if not game:
-        return
-    if not is_game_enabled("hangman"):
-        return
-    letter = update.message.text.strip()
+async def process_hangman_guess(update, context, raw: str) -> bool:
+    chat_id = update.effective_chat.id
+    game = HANGMAN_GAMES.get(chat_id)
+    if not game or not is_game_enabled("hangman"):
+        return False
     user = update.effective_user
-    remember_user(user)
+    guess = _clean_word(raw)
+    if not guess:
+        return False
 
+    if len(guess) > 1:
+        if _clean_word(game["word"]) == guess:
+            remember_user(user)
+            await safe_reply(update, context, f"🎉 {user.full_name} کل کلمه رو حدس زد! کلمه «{game['word']}» بود.")
+            del HANGMAN_GAMES[chat_id]
+            return True
+        return False
+
+    letter = guess
+    if not re.fullmatch(r"[آاأإءؤئبیپتثجچحخدذرزژسشصضطظعغفقکگلمنوهی]", letter):
+        return False
+
+    remember_user(user)
     if letter in game["guessed"] or letter in game["wrong_letters"]:
         await safe_reply(update, context, f"حرف «{letter}» رو قبلاً امتحان کردیم.")
-        return
+        return True
 
     if letter in game["word"]:
         game["guessed"].add(letter)
         if all(ch in game["guessed"] for ch in game["word"]):
             await safe_reply(update, context, f"🎉 {user.full_name} کلمه رو کامل کرد! کلمه «{game['word']}» بود.")
-            del HANGMAN_GAMES[chat.id]
-            return
+            del HANGMAN_GAMES[chat_id]
+            return True
         await safe_reply(update, context, f"✅ درست بود!\n{render_hangman_word(game)}")
-    else:
-        game["wrong"] += 1
-        game["wrong_letters"].append(letter)
-        if game["wrong"] >= len(HANGMAN_STAGES) - 1:
-            await safe_reply(
-                update, context,
-                f"{HANGMAN_STAGES[-1]} باختید! کلمه «{game['word']}» بود.",
-            )
-            del HANGMAN_GAMES[chat.id]
-            return
-        stage = HANGMAN_STAGES[game["wrong"]]
-        wrong_list = "، ".join(game["wrong_letters"])
-        await safe_reply(
-            update, context,
-            f"{stage} غلط بود! (حروف غلط: {wrong_list})\n{render_hangman_word(game)}",
-        )
+        return True
+
+    game["wrong"] += 1
+    game["wrong_letters"].append(letter)
+    if game["wrong"] >= len(HANGMAN_STAGES) - 1:
+        await safe_reply(update, context, f"{HANGMAN_STAGES[-1]} باختید! کلمه «{game['word']}» بود.")
+        del HANGMAN_GAMES[chat_id]
+        return True
+    stage = HANGMAN_STAGES[game["wrong"]]
+    wrong_list = "، ".join(game["wrong_letters"])
+    await safe_reply(update, context, f"{stage} غلط بود! (حروف غلط: {wrong_list})\n{render_hangman_word(game)}")
+    return True
 
 
 async def hangman_reveal_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1241,16 +1498,11 @@ async def hangman_reveal_callback(update: Update, context: ContextTypes.DEFAULT_
     chat_id = update.effective_chat.id
     game = HANGMAN_GAMES.get(chat_id)
     if not game:
-        await query.answer("بازی فعالی نیست.", show_alert=True)
+        await safe_answer(query, "بازی فعالی نیست.", show_alert=True)
         return
-    await query.answer()
+    await safe_answer(query)
     await context.bot.send_message(chat_id, f"🏳️ کلمه لو رفت: «{game['word']}» (دسته: {game['category']})")
     del HANGMAN_GAMES[chat_id]
-
-
-# ---- کوییز اطلاعات عمومی ----
-
-TRIVIA_LETTERS = ["A", "B", "C", "D"]
 
 
 def render_trivia_keyboard(session_id: str, options: list) -> InlineKeyboardMarkup:
@@ -1268,14 +1520,40 @@ async def start_trivia_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await safe_reply(update, context, "یک کوییز همین الان فعاله، اول اونو جواب بدید.")
             return
 
-    q = random.choice(TRIVIA_QUESTIONS)
+    wait = await safe_reply(update, context, "⏳ دارم یه سوال تازه می‌سازم...")
+    q = None
+    data = await generate_game_json(
+        "یک سوال کوییز چهارگزینه‌ای فارسی، غیرتکراری و سطح متوسط بساز. "
+        "موضوع تصادفی از تاریخ ایران، علم، سینما، ورزش، جغرافیا، موسیقی یا تکنولوژی. "
+        f"{_recent_hint('trivia')} "
+        'JSON: {"q":"...","options":["الف","ب","ج","د"],"answer":0,"cat":"علمی"} '
+        "answer ایندکس ۰ تا ۳ گزینه درست است."
+    )
+    if data:
+        opts = data.get("options") or []
+        try:
+            ans = int(data.get("answer"))
+        except (TypeError, ValueError):
+            ans = -1
+        if isinstance(opts, list) and len(opts) == 4 and 0 <= ans <= 3 and data.get("q"):
+            q = {
+                "q": str(data["q"])[:180],
+                "options": [str(o)[:40] for o in opts],
+                "answer": ans,
+                "cat": str(data.get("cat") or "عمومی")[:20],
+            }
+            remember_content("trivia", q["q"])
+
+    if not q:
+        q = pick_unused(TRIVIA_QUESTIONS, lambda x: x["q"], "trivia")
+
     session_id = new_session_id()
     TRIVIA_GAMES[session_id] = {"chat_id": chat_id, "question": q, "answered_by": None}
-    await safe_reply(
-        update, context,
-        f"🧠 کوییز! (دسته: {q['cat']})\n{q['q']}",
-        reply_markup=render_trivia_keyboard(session_id, q["options"]),
-    )
+    text = f"🧠 کوییز! (دسته: {q['cat']})\n{q['q']}"
+    try:
+        await wait.edit_text(text, reply_markup=render_trivia_keyboard(session_id, q["options"]))
+    except Exception:
+        await safe_reply(update, context, text, reply_markup=render_trivia_keyboard(session_id, q["options"]))
 
 
 async def trivia_answer_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1284,10 +1562,10 @@ async def trivia_answer_callback(update: Update, context: ContextTypes.DEFAULT_T
     idx = int(idx)
     game = TRIVIA_GAMES.get(session_id)
     if not game:
-        await query.answer("این کوییز تموم شده.", show_alert=True)
+        await safe_answer(query, "این کوییز تموم شده.", show_alert=True)
         return
     if game["answered_by"] is not None:
-        await query.answer("یکی دیگه زودتر جواب داد!", show_alert=True)
+        await safe_answer(query, "یکی دیگه زودتر جواب داد!", show_alert=True)
         return
 
     user = update.effective_user
@@ -1296,17 +1574,15 @@ async def trivia_answer_callback(update: Update, context: ContextTypes.DEFAULT_T
 
     if idx == q["answer"]:
         game["answered_by"] = user.id
-        await query.answer("درست بود! 🎉")
+        await safe_answer(query, "درست بود! 🎉")
         correct_option = q["options"][q["answer"]]
-        await query.edit_message_text(
-            f"🧠 {q['q']}\n\n✅ جواب درست: {correct_option}\n🏆 {user.full_name} اول جواب داد!"
+        await safe_edit(
+            query,
+            f"🧠 {q['q']}\n\n✅ جواب درست: {correct_option}\n🏆 {user.full_name} اول جواب داد!",
         )
         del TRIVIA_GAMES[session_id]
     else:
-        await query.answer("غلط بود، یکی دیگه امتحان کنه!", show_alert=True)
-
-
-# ---- این یا اون ----
+        await safe_answer(query, "غلط بود، یکی دیگه امتحان کنه!", show_alert=True)
 
 
 def render_wyr_keyboard(session_id: str, game: dict) -> InlineKeyboardMarkup:
@@ -1322,17 +1598,31 @@ def render_wyr_keyboard(session_id: str, game: dict) -> InlineKeyboardMarkup:
 
 
 async def start_wyr_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    option_a, option_b = random.choice(WYR_QUESTIONS)
+    wait = await safe_reply(update, context, "⏳ دارم یه دوراهی تازه می‌سازم...")
+    option_a = option_b = None
+    data = await generate_game_json(
+        "یک سوال «این یا اون» بامزه و کوتاه به فارسی بساز. "
+        f"{_recent_hint('wyr')} "
+        'JSON: {"a":"...","b":"..."}'
+    )
+    if data and data.get("a") and data.get("b"):
+        option_a, option_b = str(data["a"])[:60], str(data["b"])[:60]
+        remember_content("wyr", option_a)
+    if not option_a:
+        option_a, option_b = pick_unused(WYR_QUESTIONS, lambda x: x[0], "wyr")
+
     session_id = new_session_id()
     WYR_GAMES[session_id] = {
-        "option_a": option_a, "option_b": option_b,
-        "votes": {}, "starter": update.effective_user.id,
+        "option_a": option_a,
+        "option_b": option_b,
+        "votes": {},
+        "starter": update.effective_user.id,
     }
-    await safe_reply(
-        update, context,
-        f"🤔 این یا اون؟\n\n1️⃣ {option_a}\n— یا —\n2️⃣ {option_b}\n\nرأی بده 👇",
-        reply_markup=render_wyr_keyboard(session_id, WYR_GAMES[session_id]),
-    )
+    text = f"🤔 این یا اون؟\n\n1️⃣ {option_a}\n— یا —\n2️⃣ {option_b}\n\nرأی بده 👇"
+    try:
+        await wait.edit_text(text, reply_markup=render_wyr_keyboard(session_id, WYR_GAMES[session_id]))
+    except Exception:
+        await safe_reply(update, context, text, reply_markup=render_wyr_keyboard(session_id, WYR_GAMES[session_id]))
 
 
 async def wyr_vote_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1340,35 +1630,32 @@ async def wyr_vote_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     _, session_id, choice = query.data.split(":")
     game = WYR_GAMES.get(session_id)
     if not game:
-        await query.answer("این نظرسنجی بسته شده.", show_alert=True)
+        await safe_answer(query, "این نظرسنجی بسته شده.", show_alert=True)
         return
     user = update.effective_user
     remember_user(user)
 
     if choice == "close":
         if user.id != game["starter"]:
-            await query.answer("فقط کسی که این یا اون رو شروع کرده می‌تونه ببندش.", show_alert=True)
+            await safe_answer(query, "فقط کسی که این یا اون رو شروع کرده می‌تونه ببندش.", show_alert=True)
             return
         votes_a = sum(1 for v in game["votes"].values() if v == "a")
         votes_b = sum(1 for v in game["votes"].values() if v == "b")
-        await query.answer()
-        await query.edit_message_text(
+        await safe_answer(query)
+        await safe_edit(
+            query,
             f"🤔 این یا اون؟\n\n1️⃣ {game['option_a']} — {votes_a} رأی\n2️⃣ {game['option_b']} — {votes_b} رأی\n\n"
-            "✅ نظرسنجی بسته شد."
+            "✅ نظرسنجی بسته شد.",
         )
         del WYR_GAMES[session_id]
         return
 
     game["votes"][user.id] = choice
-    await query.answer("رأیت ثبت شد ✅")
-    await query.edit_message_reply_markup(reply_markup=render_wyr_keyboard(session_id, game))
-
-
-# ---- حدس اموجی ----
-
-
-def _normalize_fa(text: str) -> str:
-    return text.strip().replace("ي", "ی").replace("ك", "ک").replace("‌", " ").replace("  ", " ").lower()
+    await safe_answer(query, "رأیت ثبت شد ✅")
+    try:
+        await query.edit_message_reply_markup(reply_markup=render_wyr_keyboard(session_id, game))
+    except BadRequest:
+        pass
 
 
 async def start_emoji_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1376,29 +1663,35 @@ async def start_emoji_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if chat_id in EMOJI_GAMES:
         await safe_reply(update, context, f"یک حدس اموجی همین الان فعاله: {EMOJI_GAMES[chat_id]['emojis']}")
         return
-    emojis, answer = random.choice(EMOJI_RIDDLES)
-    EMOJI_GAMES[chat_id] = {"emojis": emojis, "answer": answer}
-    kb = InlineKeyboardMarkup([[InlineKeyboardButton("⏭️ رد شدن / لو دادن", callback_data="emj:skip")]])
-    await safe_reply(update, context, f"🧩 حدس اموجی!\n\n{emojis}\n\nاسم فیلم/عبارت رو بنویس 👇", reply_markup=kb)
+    wait = await safe_reply(update, context, "⏳ دارم یه معمای اموجی تازه می‌سازم...")
+    emojis = answer = None
+    aliases = []
+    data = await generate_game_json(
+        "یک معمای حدس اموجی فارسی بساز: ۲ تا ۴ اموجی که یک فیلم، کتاب یا عبارت معروف را نشان بدهد. "
+        f"{_recent_hint('emoji')} "
+        'JSON: {"emojis":"🦁👑","answer":"شیرشاه","aliases":["شیر شاه"]}'
+    )
+    if data and data.get("emojis") and data.get("answer"):
+        emojis = str(data["emojis"])[:20]
+        answer = str(data["answer"])[:40]
+        aliases = [str(a) for a in (data.get("aliases") or [])][:6]
+        remember_content("emoji", answer)
+    if not emojis:
+        emojis, answer = pick_unused(EMOJI_RIDDLES, lambda x: x[1], "emoji")
+        aliases = []
+
+    EMOJI_GAMES[chat_id] = {"emojis": emojis, "answer": answer, "aliases": aliases}
+    text = f"🧩 حدس اموجی!\n\n{emojis}\n\nاسم فیلم/عبارت رو بنویس 👇"
+    try:
+        await wait.edit_text(text, reply_markup=skip_kb("emj:skip"))
+    except Exception:
+        await safe_reply(update, context, text, reply_markup=skip_kb("emj:skip"))
 
 
-async def emoji_guess_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat = update.effective_chat
-    if not in_linked_group(chat.id):
-        return
-    game = EMOJI_GAMES.get(chat.id)
-    if not game:
-        return
-    if not is_game_enabled("emoji"):
-        return
-    guess = update.message.text
-    if _normalize_fa(guess) != _normalize_fa(game["answer"]):
-        return
-
-    user = update.effective_user
-    remember_user(user)
-    await safe_reply(update, context, f"🎉 {user.full_name} درست حدس زد! جواب «{game['answer']}» بود.")
-    del EMOJI_GAMES[chat.id]
+def _answer_matches(guess: str, answer: str, aliases=None) -> bool:
+    g = _normalize_fa(guess)
+    opts = [_normalize_fa(answer)] + [_normalize_fa(a) for a in (aliases or [])]
+    return g in opts
 
 
 async def emoji_skip_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1406,17 +1699,11 @@ async def emoji_skip_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
     chat_id = update.effective_chat.id
     game = EMOJI_GAMES.get(chat_id)
     if not game:
-        await query.answer("بازی فعالی نیست.", show_alert=True)
+        await safe_answer(query, "بازی فعالی نیست.", show_alert=True)
         return
-    await query.answer()
+    await safe_answer(query)
     await context.bot.send_message(chat_id, f"⏭️ رد شد! جواب «{game['answer']}» بود.")
     del EMOJI_GAMES[chat_id]
-
-
-# ---- بلک‌جک ----
-
-CARD_RANKS = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"]
-CARD_SUITS = ["♠️", "♥️", "♦️", "♣️"]
 
 
 def _new_deck():
@@ -1463,20 +1750,25 @@ async def start_blackjack_game(update: Update, context: ContextTypes.DEFAULT_TYP
     dealer_hand = [deck.pop(), deck.pop()]
     session_id = new_session_id()
     BLACKJACK_GAMES[session_id] = {
-        "player_id": user.id, "player_name": user.full_name,
-        "deck": deck, "player_hand": player_hand, "dealer_hand": dealer_hand,
+        "player_id": user.id,
+        "player_name": user.full_name,
+        "deck": deck,
+        "player_hand": player_hand,
+        "dealer_hand": dealer_hand,
     }
 
     if _hand_value(player_hand) == 21:
         await safe_reply(
-            update, context,
+            update,
+            context,
             f"🃏 بلک‌جک برای {user.full_name}!\nدست تو: {_fmt_hand(player_hand)} (21) 🎉\nدست دیلر: {_fmt_hand(dealer_hand)}\n\n🏆 بردی!",
         )
         del BLACKJACK_GAMES[session_id]
         return
 
     await safe_reply(
-        update, context,
+        update,
+        context,
         f"🃏 بلک‌جک شروع شد، {user.full_name}!\n"
         f"دست تو: {_fmt_hand(player_hand)} ({_hand_value(player_hand)})\n"
         f"دست دیلر: {dealer_hand[0][0]}{dealer_hand[0][1]} 🂠",
@@ -1489,37 +1781,42 @@ async def blackjack_action_callback(update: Update, context: ContextTypes.DEFAUL
     _, session_id, action = query.data.split(":")
     game = BLACKJACK_GAMES.get(session_id)
     if not game:
-        await query.answer("این بازی تموم شده.", show_alert=True)
+        await safe_answer(query, "این بازی تموم شده.", show_alert=True)
         return
     user = update.effective_user
     if user.id != game["player_id"]:
-        await query.answer("این بازی برای شما نیست.", show_alert=True)
+        await safe_answer(query, "این بازی برای شما نیست.", show_alert=True)
         return
 
-    await query.answer()
+    await safe_answer(query)
 
     if action == "hit":
+        if not game["deck"]:
+            game["deck"] = _new_deck()
         game["player_hand"].append(game["deck"].pop())
         value = _hand_value(game["player_hand"])
         if value > 21:
-            await query.edit_message_text(
-                f"🃏 دست تو: {_fmt_hand(game['player_hand'])} ({value})\n\n💥 باختی! (بیشتر از ۲۱ شد)"
+            await safe_edit(
+                query,
+                f"🃏 دست تو: {_fmt_hand(game['player_hand'])} ({value})\n\n💥 باختی! (بیشتر از ۲۱ شد)",
             )
             del BLACKJACK_GAMES[session_id]
             return
         if value == 21:
-            action = "stand"  # ۲۱ شد، خودکار می‌ره سراغ دیلر
+            action = "stand"
         else:
-            await query.edit_message_text(
+            await safe_edit(
+                query,
                 f"🃏 دست تو: {_fmt_hand(game['player_hand'])} ({value})\n"
                 f"دست دیلر: {game['dealer_hand'][0][0]}{game['dealer_hand'][0][1]} 🂠",
                 reply_markup=render_blackjack_keyboard(session_id),
             )
             return
 
-    # action == "stand": نوبت دیلر
     dealer_hand = game["dealer_hand"]
     while _hand_value(dealer_hand) < 17:
+        if not game["deck"]:
+            game["deck"] = _new_deck()
         dealer_hand.append(game["deck"].pop())
 
     player_value = _hand_value(game["player_hand"])
@@ -1530,17 +1827,397 @@ async def blackjack_action_callback(update: Update, context: ContextTypes.DEFAUL
     elif player_value == dealer_value:
         outcome = "🤝 مساوی شد!"
     else:
-        outcome = f"💀 دیلر برد."
+        outcome = "💀 دیلر برد."
 
-    await query.edit_message_text(
+    await safe_edit(
+        query,
         f"🃏 دست تو: {_fmt_hand(game['player_hand'])} ({player_value})\n"
-        f"دست دیلر: {_fmt_hand(dealer_hand)} ({dealer_value})\n\n{outcome}"
+        f"دست دیلر: {_fmt_hand(dealer_hand)} ({dealer_value})\n\n{outcome}",
     )
     del BLACKJACK_GAMES[session_id]
 
 
+def _scramble(word: str) -> str:
+    letters = list(word)
+    for _ in range(8):
+        random.shuffle(letters)
+        if "".join(letters) != word:
+            break
+    return " ".join(letters)
+
+
+async def start_scramble_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+    if chat_id in SCRAMBLE_GAMES:
+        await safe_reply(update, context, f"یک حروف به‌هم‌ریخته فعاله: {SCRAMBLE_GAMES[chat_id]['shown']}")
+        return
+    wait = await safe_reply(update, context, "⏳ دارم یه کلمه قاطی می‌کنم...")
+    word, hint = None, None
+    data = await generate_game_json(
+        "یک کلمه‌ی فارسی یک‌تکه ۴ تا ۸ حرف برای بازی حروف به‌هم‌ریخته بساز. "
+        f"{_recent_hint('scramble')} "
+        'JSON: {"word":"گیتار","hint":"ساز"}'
+    )
+    if data:
+        cand = _clean_word(str(data.get("word") or ""))
+        if 3 <= len(cand) <= 10:
+            word, hint = cand, str(data.get("hint") or "عمومی")[:20]
+            remember_content("scramble", word)
+    if not word:
+        word, hint = pick_unused(HANGMAN_WORDS, lambda x: x[0], "scramble")
+    shown = _scramble(word)
+    SCRAMBLE_GAMES[chat_id] = {"word": word, "shown": shown, "hint": hint}
+    text = f"🔀 حروف به‌هم‌ریخته! (راهنما: {hint})\n\n{shown}\n\nکلمه درست رو بنویس 👇"
+    try:
+        await wait.edit_text(text, reply_markup=skip_kb("scr:skip"))
+    except Exception:
+        await safe_reply(update, context, text, reply_markup=skip_kb("scr:skip"))
+
+
+async def start_riddle_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+    if chat_id in RIDDLE_GAMES:
+        await safe_reply(update, context, f"یک چیستان فعاله:\n{RIDDLE_GAMES[chat_id]['q']}")
+        return
+    wait = await safe_reply(update, context, "⏳ دارم یه چیستان تازه می‌سازم...")
+    q = answer = None
+    aliases = []
+    data = await generate_game_json(
+        "یک چیستان کوتاه و مناسب گروه به فارسی بساز. جواب یک کلمه‌ای باشد. "
+        f"{_recent_hint('riddle')} "
+        'JSON: {"q":"...","answer":"...","aliases":["..."]}'
+    )
+    if data and data.get("q") and data.get("answer"):
+        q, answer = str(data["q"])[:200], str(data["answer"])[:40]
+        aliases = [str(a) for a in (data.get("aliases") or [])][:6]
+        remember_content("riddle", answer)
+    if not q:
+        q, answer, aliases = pick_unused(RIDDLES_BANK, lambda x: x[1], "riddle")
+    RIDDLE_GAMES[chat_id] = {"q": q, "answer": answer, "aliases": aliases}
+    text = f"❓ چیستان!\n\n{q}\n\nجواب رو بنویس 👇"
+    try:
+        await wait.edit_text(text, reply_markup=skip_kb("rid:skip"))
+    except Exception:
+        await safe_reply(update, context, text, reply_markup=skip_kb("rid:skip"))
+
+
+async def start_typerace_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+    if chat_id in TYPERACE_GAMES:
+        await safe_reply(update, context, f"یک تایپ سریع فعاله:\n{TYPERACE_GAMES[chat_id]['phrase']}")
+        return
+    wait = await safe_reply(update, context, "⏳ دارم یه جمله تازه می‌سازم...")
+    phrase = None
+    data = await generate_game_json(
+        "یک جمله‌ی کوتاه فارسی ۴ تا ۸ کلمه، ساده و بدون علائم عجیب برای مسابقه تایپ بساز. "
+        f"{_recent_hint('typerace')} "
+        'JSON: {"phrase":"..."}'
+    )
+    if data and data.get("phrase"):
+        phrase = re.sub(r"\s+", " ", str(data["phrase"])).strip()[:60]
+        remember_content("typerace", phrase)
+    if not phrase:
+        phrase = pick_unused(TYPERACE_PHRASES, lambda x: x, "typerace")
+    TYPERACE_GAMES[chat_id] = {"phrase": phrase}
+    text = f"⌨️ تایپ سریع!\nاولین نفری که دقیقاً همین جمله رو بفرسته می‌بره:\n\n{phrase}"
+    try:
+        await wait.edit_text(text)
+    except Exception:
+        await safe_reply(update, context, text)
+
+
+async def start_flag_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+    if chat_id in FLAG_GAMES:
+        await safe_reply(update, context, f"یک حدس پرچم فعاله: {FLAG_GAMES[chat_id]['flag']}")
+        return
+    flag, country = pick_unused(FLAG_RIDDLES, lambda x: x[1], "flag")
+    FLAG_GAMES[chat_id] = {"flag": flag, "answer": country}
+    await safe_reply(
+        update,
+        context,
+        f"🚩 حدس پرچم!\n\n{flag}\n\nاسم کشور رو بنویس 👇",
+        reply_markup=skip_kb("flg:skip"),
+    )
+
+
+async def start_chain_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+    if chat_id in CHAIN_GAMES:
+        g = CHAIN_GAMES[chat_id]
+        await safe_reply(update, context, f"زنجیره فعاله. آخرین کلمه: {g['last']} — بعدی با «{g['need']}»")
+        return
+    start = random.choice(["سیب", "دریا", "کتاب", "ماه", "گل", "خانه", "دوست", "بازی"])
+    need = _clean_word(start)[-1]
+    CHAIN_GAMES[chat_id] = {"last": start, "need": need, "used": {_clean_word(start)}, "count": 0}
+    await safe_reply(
+        update,
+        context,
+        f"🔗 زنجیره کلمات شروع شد!\nکلمه اول: {start}\nکلمه بعدی باید با «{need}» شروع بشه.\n"
+        "هر کسی می‌تونه جواب بده. کلمات تکراری قبول نیست.",
+        reply_markup=skip_kb("chn:skip"),
+    )
+
+
+async def start_proverb_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+    if chat_id in PROVERB_GAMES:
+        await safe_reply(update, context, f"یک ضرب‌المثل فعاله:\n{PROVERB_GAMES[chat_id]['hint']} ...")
+        return
+    wait = await safe_reply(update, context, "⏳ دارم یه ضرب‌المثل تازه می‌چینم...")
+    full = hint = ending = None
+    data = await generate_game_json(
+        "یک ضرب‌المثل معروف فارسی را نصف کن. "
+        f"{_recent_hint('proverb')} "
+        'JSON: {"full":"...","hint":"نیمه اول","ending":"نیمه دوم"}'
+    )
+    if data and data.get("full") and data.get("hint") and data.get("ending"):
+        full, hint, ending = str(data["full"]), str(data["hint"]), str(data["ending"])
+        remember_content("proverb", full)
+    if not full:
+        full, hint, ending = pick_unused(PROVERBS, lambda x: x[0], "proverb")
+    PROVERB_GAMES[chat_id] = {"full": full, "hint": hint, "ending": ending}
+    text = f"📜 ضرب‌المثل!\n\n{hint} ...\n\nادامه‌ش رو بنویس 👇"
+    try:
+        await wait.edit_text(text, reply_markup=skip_kb("prv:skip"))
+    except Exception:
+        await safe_reply(update, context, text, reply_markup=skip_kb("prv:skip"))
+
+
+async def start_memory_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+    if chat_id in MEMORY_GAMES:
+        await safe_reply(update, context, "یک بازی حافظه همین الان فعاله.")
+        return
+    seq = random.sample(MEMORY_EMOJIS, 5)
+    msg = await safe_reply(update, context, "🧠 حافظه! اینارو ۵ ثانیه به خاطر بسپار:\n\n" + " ".join(seq))
+    MEMORY_GAMES[chat_id] = {"seq": seq, "shown": True, "target": " ".join(seq)}
+    await asyncio.sleep(5)
+    game = MEMORY_GAMES.get(chat_id)
+    if not game or not game.get("shown"):
+        return
+    game["shown"] = False
+    hidden = "الان همون اموجی‌ها رو با فاصله و به همون ترتیب بنویس 👇"
+    try:
+        await msg.edit_text(f"🧠 حافظه!\n\n{hidden}", reply_markup=skip_kb("mem:skip"))
+    except Exception:
+        await context.bot.send_message(chat_id, f"🧠 حافظه!\n\n{hidden}", reply_markup=skip_kb("mem:skip"))
+
+
+async def start_color_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+    for sid, g in list(COLOR_GAMES.items()):
+        if g["chat_id"] == chat_id:
+            await safe_reply(update, context, "یک رنگ سریع همین الان فعاله.")
+            return
+    target = random.choice(COLOR_CHOICES)
+    buttons = COLOR_CHOICES[:]
+    random.shuffle(buttons)
+    session_id = new_session_id()
+    COLOR_GAMES[session_id] = {"chat_id": chat_id, "target": target[0], "winner": None}
+    kb = InlineKeyboardMarkup(
+        [[InlineKeyboardButton(f"{emo} {name}", callback_data=f"clr:{session_id}:{name}")] for name, emo in buttons]
+    )
+    await safe_reply(update, context, f"🎨 رنگ سریع!\nاولین نفری که دکمه «{target[0]}» رو بزنه می‌بره!", reply_markup=kb)
+
+
+async def color_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    _, session_id, name = query.data.split(":")
+    game = COLOR_GAMES.get(session_id)
+    if not game or game.get("winner"):
+        await safe_answer(query, "این دور تموم شده.", show_alert=True)
+        return
+    if name != game["target"]:
+        await safe_answer(query, "غلط بود! رنگ درست رو بزن.", show_alert=True)
+        return
+    user = update.effective_user
+    remember_user(user)
+    game["winner"] = user.id
+    await safe_answer(query, "درست بود!")
+    await safe_edit(query, f"🎨 رنگ «{game['target']}»!\n🏆 {user.full_name} اول زد!")
+    del COLOR_GAMES[session_id]
+
+
+async def start_category_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+    if chat_id in CATEGORY_GAMES:
+        await safe_reply(update, context, f"یک کلمه در دسته فعاله: {CATEGORY_GAMES[chat_id]['category']}")
+        return
+    wait = await safe_reply(update, context, "⏳ دارم یه دسته تازه می‌سازم...")
+    category, accepted = None, []
+    data = await generate_game_json(
+        "یک دسته ساده فارسی برای بازی گروهی بساز و حداقل ۱۲ جواب درست کوتاه بده. "
+        f"{_recent_hint('category')} "
+        'JSON: {"category":"میوه","accepted":["سیب","موز"]}'
+    )
+    if data and data.get("category") and isinstance(data.get("accepted"), list):
+        category = str(data["category"])[:30]
+        accepted = [_clean_word(str(a)) for a in data["accepted"] if _clean_word(str(a))]
+        remember_content("category", category)
+    if not category or len(accepted) < 4:
+        item = pick_unused(CATEGORY_BANK, lambda x: x["category"], "category")
+        category, accepted = item["category"], [_clean_word(a) for a in item["accepted"]]
+    CATEGORY_GAMES[chat_id] = {"category": category, "accepted": set(accepted), "used": set()}
+    text = f"📦 کلمه در دسته!\nاولین نفری که یه «{category}» بنویسه می‌بره 👇"
+    try:
+        await wait.edit_text(text, reply_markup=skip_kb("cat:skip"))
+    except Exception:
+        await safe_reply(update, context, text, reply_markup=skip_kb("cat:skip"))
+
+
+async def generic_skip_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    data = query.data
+    chat_id = update.effective_chat.id
+    mapping = {
+        "scr:skip": (SCRAMBLE_GAMES, "word", "حروف به‌هم‌ریخته"),
+        "rid:skip": (RIDDLE_GAMES, "answer", "چیستان"),
+        "flg:skip": (FLAG_GAMES, "answer", "پرچم"),
+        "chn:skip": (CHAIN_GAMES, "last", "زنجیره"),
+        "prv:skip": (PROVERB_GAMES, "full", "ضرب‌المثل"),
+        "mem:skip": (MEMORY_GAMES, "target", "حافظه"),
+        "cat:skip": (CATEGORY_GAMES, "category", "دسته"),
+    }
+    info = mapping.get(data)
+    if not info:
+        await safe_answer(query)
+        return
+    store, field, title = info
+    game = store.get(chat_id)
+    if not game:
+        await safe_answer(query, "بازی فعالی نیست.", show_alert=True)
+        return
+    await safe_answer(query)
+    await context.bot.send_message(chat_id, f"⏭️ {title} رد شد. جواب: «{game.get(field, '')}»")
+    del store[chat_id]
+
+
+def _match_any(guess: str, *answers) -> bool:
+    g = _normalize_fa(guess)
+    return any(g == _normalize_fa(a) or _clean_word(g) == _clean_word(a) for a in answers if a)
+
+
+async def active_game_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat = update.effective_chat
+    if not in_linked_group(chat.id):
+        return
+    raw = (update.message.text or "").strip()
+    if not raw or raw in TRIGGER_TO_GAME:
+        return
+    user = update.effective_user
+    chat_id = chat.id
+    value = parse_int(raw)
+
+    if value is not None:
+        math_game = MATH_GAMES.get(chat_id)
+        if math_game is not None and is_game_enabled("math"):
+            remember_user(user)
+            if value == math_game["answer"]:
+                await safe_reply(
+                    update,
+                    context,
+                    f"🎉 {user.full_name} درست جواب داد! {math_game['question']} = {math_game['answer']}",
+                )
+                del MATH_GAMES[chat_id]
+                raise ApplicationHandlerStop
+        guess_game = GUESS_GAMES.get(chat_id)
+        if guess_game and is_game_enabled("guess"):
+            remember_user(user)
+            if value == guess_game["number"]:
+                await safe_reply(update, context, f"🎉 {user.full_name} درست حدس زد! عدد {guess_game['number']} بود.")
+                del GUESS_GAMES[chat_id]
+            elif value < guess_game["number"]:
+                await safe_reply(update, context, "⬆️ بزرگ‌تره!")
+            else:
+                await safe_reply(update, context, "⬇️ کوچیک‌تره!")
+            raise ApplicationHandlerStop
+
+    if await process_hangman_guess(update, context, raw):
+        raise ApplicationHandlerStop
+
+    if chat_id in TYPERACE_GAMES and is_game_enabled("typerace"):
+        if _normalize_fa(raw) == _normalize_fa(TYPERACE_GAMES[chat_id]["phrase"]):
+            remember_user(user)
+            await safe_reply(update, context, f"⌨️ {user.full_name} سریع‌ترین بود!")
+            del TYPERACE_GAMES[chat_id]
+            raise ApplicationHandlerStop
+
+    if chat_id in MEMORY_GAMES and is_game_enabled("memory") and not MEMORY_GAMES[chat_id].get("shown"):
+        target = MEMORY_GAMES[chat_id]["target"]
+        compact = raw.replace(" ", "")
+        if raw == target or compact == target.replace(" ", ""):
+            remember_user(user)
+            await safe_reply(update, context, f"🧠 {user.full_name} ترتیب رو درست نوشت! {target}")
+            del MEMORY_GAMES[chat_id]
+            raise ApplicationHandlerStop
+
+    if chat_id in SCRAMBLE_GAMES and is_game_enabled("scramble"):
+        if _clean_word(raw) == _clean_word(SCRAMBLE_GAMES[chat_id]["word"]):
+            remember_user(user)
+            await safe_reply(update, context, f"🔀 {user.full_name} درست گفت! کلمه «{SCRAMBLE_GAMES[chat_id]['word']}» بود.")
+            del SCRAMBLE_GAMES[chat_id]
+            raise ApplicationHandlerStop
+
+    if chat_id in RIDDLE_GAMES and is_game_enabled("riddle"):
+        g = RIDDLE_GAMES[chat_id]
+        if _answer_matches(raw, g["answer"], g.get("aliases")):
+            remember_user(user)
+            await safe_reply(update, context, f"❓ {user.full_name} چیستان رو حل کرد! جواب «{g['answer']}» بود.")
+            del RIDDLE_GAMES[chat_id]
+            raise ApplicationHandlerStop
+
+    if chat_id in FLAG_GAMES and is_game_enabled("flag"):
+        if _answer_matches(raw, FLAG_GAMES[chat_id]["answer"]):
+            remember_user(user)
+            await safe_reply(update, context, f"🚩 {user.full_name} درست گفت! {FLAG_GAMES[chat_id]['answer']}")
+            del FLAG_GAMES[chat_id]
+            raise ApplicationHandlerStop
+
+    if chat_id in PROVERB_GAMES and is_game_enabled("proverb"):
+        g = PROVERB_GAMES[chat_id]
+        if _match_any(raw, g["ending"], g["full"]) or _clean_word(raw) in (_clean_word(g["ending"]), _clean_word(g["full"])):
+            remember_user(user)
+            await safe_reply(update, context, f"📜 {user.full_name} درست گفت!\n{g['full']}")
+            del PROVERB_GAMES[chat_id]
+            raise ApplicationHandlerStop
+
+    if chat_id in CATEGORY_GAMES and is_game_enabled("category"):
+        g = CATEGORY_GAMES[chat_id]
+        word = _clean_word(raw)
+        if word in g["accepted"] and word not in g["used"]:
+            remember_user(user)
+            await safe_reply(update, context, f"📦 {user.full_name} برد! «{raw}» یه {g['category']} بود.")
+            del CATEGORY_GAMES[chat_id]
+            raise ApplicationHandlerStop
+
+    if chat_id in CHAIN_GAMES and is_game_enabled("chain"):
+        g = CHAIN_GAMES[chat_id]
+        word = _clean_word(raw)
+        if len(word) >= 2 and word.startswith(g["need"]) and word not in g["used"]:
+            remember_user(user)
+            g["used"].add(word)
+            g["last"] = raw.strip()
+            g["need"] = word[-1]
+            g["count"] += 1
+            await safe_reply(
+                update,
+                context,
+                f"🔗 {user.full_name}: {raw.strip()} ✅\nبعدی با «{g['need']}» شروع بشه.",
+            )
+            raise ApplicationHandlerStop
+
+    if chat_id in EMOJI_GAMES and is_game_enabled("emoji"):
+        g = EMOJI_GAMES[chat_id]
+        if _answer_matches(raw, g["answer"], g.get("aliases")):
+            remember_user(user)
+            await safe_reply(update, context, f"🎉 {user.full_name} درست حدس زد! جواب «{g['answer']}» بود.")
+            del EMOJI_GAMES[chat_id]
+            raise ApplicationHandlerStop
+
+
 # ============================================================================
-# چت هوش مصنوعی (پاسخ به ریپلای روی پیام‌های ربات)
+# چت هوش مصنوعی
 # ============================================================================
 
 
@@ -1560,10 +2237,9 @@ async def ai_reply_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     remember_user(user)
     now = time.time()
 
-    # کول‌داون کل گروه: جلوی شلیک همزمان چند نفر مختلف رو می‌گیره تا هزینه‌ی API منفجر نشه
     group_last = AI_GROUP_LAST_USED.get(chat.id, 0)
     if now - group_last < AI_GROUP_COOLDOWN_SECONDS:
-        return  # سکوت می‌کنیم، پیام اضافه نمی‌فرستیم تا خودش هم اسپم نشه
+        return
 
     last = AI_LAST_USED.get(user.id, 0)
     if now - last < AI_RATE_LIMIT_SECONDS:
@@ -1585,7 +2261,12 @@ async def ai_reply_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_text = update.message.text
 
     await context.bot.send_chat_action(chat.id, "typing")
-    answer, used_model = await ask_groq(system_prompt, history, user_text)
+    answer, used_model = await ask_groq(
+        system_prompt,
+        history,
+        user_text,
+        models=[GROQ_CHAT_MODEL, GROQ_GAME_MODEL],
+    )
 
     if answer is None:
         await safe_reply(update, context, "الان نتونستم به هوش مصنوعی وصل بشم، یکم بعد دوباره امتحان کن. 🙏")
@@ -1594,7 +2275,6 @@ async def ai_reply_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     history.append({"role": "user", "text": user_text})
     history.append({"role": "model", "text": answer})
     AI_HISTORY[user.id] = history[-16:]
-
     await safe_reply(update, context, answer)
 
 
@@ -1606,50 +2286,36 @@ async def ai_reply_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 def main():
     if not BOT_TOKEN or ":" not in BOT_TOKEN:
         raise SystemExit("توکن ربات (BOT_TOKEN) درست تنظیم نشده.")
+    if not GROQ_API_KEYS:
+        logger.warning("هیچ کلید گراکی تنظیم نشده.")
 
     app = Application.builder().token(BOT_TOKEN).build()
 
-    # شروع
     app.add_handler(CommandHandler("start", cmd_start))
-
-    # پیوی: کد ادمین 1212
     app.add_handler(
         MessageHandler(filters.ChatType.PRIVATE & filters.Regex(rf"^{ADMIN_PASSCODE}$"), private_passcode)
     )
-    # پیوی: مراحل چندمرحله‌ای پنل ادمین
     app.add_handler(
         MessageHandler(filters.ChatType.PRIVATE & filters.TEXT & ~filters.COMMAND, private_text_router)
     )
 
-    # عضویت ربات در گروه / تغییر نام گروه
     app.add_handler(ChatMemberHandler(on_my_chat_member, ChatMemberHandler.MY_CHAT_MEMBER))
     app.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_TITLE, on_new_chat_title))
 
-    # تریگر بازی‌ها (نام دقیق بازی به‌عنوان متن پیام)
     trigger_pattern = "^(" + "|".join(re.escape(t) for t in TRIGGER_TO_GAME) + ")$"
     app.add_handler(
         MessageHandler(filters.ChatType.GROUPS & filters.Regex(trigger_pattern), game_trigger_handler)
     )
-    # حدس عدد + ریاضی سریع: پیام‌های فقط‌رقمی (هر دو روی یک فیلتر، تفکیک داخل هندلر)
-    app.add_handler(
-        MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^\d+$"), guess_number_handler)
-    )
-    # حدس کلمه (دار): پیام‌های تک‌حرفی فارسی
-    app.add_handler(
-        MessageHandler(filters.ChatType.GROUPS & filters.Regex(r"^[آ-یءئؤأآ]$"), hangman_letter_handler)
-    )
-    # حدس اموجی: هر پیام متنی معمولی (غیر از ریپلای/دستور) - اگه بازی فعال نباشه بی‌اثره
     app.add_handler(
         MessageHandler(
-            filters.ChatType.GROUPS & filters.TEXT & ~filters.COMMAND & ~filters.REPLY, emoji_guess_handler
+            filters.ChatType.GROUPS & filters.TEXT & ~filters.COMMAND,
+            active_game_text_handler,
         )
     )
-    # هوش مصنوعی: ریپلای روی پیام ربات
     app.add_handler(
         MessageHandler(filters.ChatType.GROUPS & filters.REPLY & filters.TEXT & ~filters.COMMAND, ai_reply_handler)
     )
 
-    # کال‌بک‌ها
     app.add_handler(CallbackQueryHandler(admin_callbacks, pattern=r"^adm:"))
     app.add_handler(CallbackQueryHandler(group_callbacks, pattern=r"^grp:"))
     app.add_handler(CallbackQueryHandler(game_join_callback, pattern=r"^join:"))
@@ -1661,8 +2327,10 @@ def main():
     app.add_handler(CallbackQueryHandler(wyr_vote_callback, pattern=r"^wyr:"))
     app.add_handler(CallbackQueryHandler(emoji_skip_callback, pattern=r"^emj:"))
     app.add_handler(CallbackQueryHandler(blackjack_action_callback, pattern=r"^bj:"))
+    app.add_handler(CallbackQueryHandler(color_callback, pattern=r"^clr:"))
+    app.add_handler(CallbackQueryHandler(generic_skip_callback, pattern=r"^(scr|rid|flg|chn|prv|mem|cat):"))
 
-    logger.info("Bot starting...")
+    logger.info("Bot starting with %s Groq keys...", len(GROQ_API_KEYS))
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 
 
