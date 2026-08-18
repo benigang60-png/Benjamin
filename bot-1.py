@@ -125,6 +125,12 @@ GAMES = {
     "memory": {"trigger": "حافظه", "title": "حافظه تصویری", "min": 1, "max": None},
     "colors": {"trigger": "رنگ سریع", "title": "رنگ سریع", "min": 1, "max": None},
     "category": {"trigger": "کلمه در دسته", "title": "کلمه در دسته", "min": 1, "max": None},
+    "whoami": {"trigger": "کی هستم", "title": "کی هستم؟", "min": 1, "max": None},
+    "oddone": {"trigger": "گزینه ناجور", "title": "گزینه ناجور", "min": 1, "max": None},
+    "quote": {"trigger": "حدس فیلم", "title": "حدس فیلم از دیالوگ", "min": 1, "max": None},
+    "year": {"trigger": "حدس سال", "title": "حدس سال", "min": 1, "max": None},
+    "codes": {"trigger": "کد سریع", "title": "کد سریع", "min": 1, "max": None},
+    "lie": {"trigger": "دروغه کدومه", "title": "دروغه کدومه؟", "min": 1, "max": None},
 }
 TRIGGER_TO_GAME = {meta["trigger"]: key for key, meta in GAMES.items()}
 
@@ -292,6 +298,12 @@ PROVERB_GAMES = {}
 MEMORY_GAMES = {}
 COLOR_GAMES = {}
 CATEGORY_GAMES = {}
+WHOAMI_GAMES = {}
+ODDONE_GAMES = {}
+QUOTE_GAMES = {}
+YEAR_GAMES = {}
+CODE_GAMES = {}
+LIE_GAMES = {}
 RECENT_CONTENT = {}
 AI_LAST_USED = {}
 AI_GROUP_LAST_USED = {}
@@ -429,6 +441,38 @@ CATEGORY_BANK = [
     {"category": "رنگ", "accepted": ["قرمز", "آبی", "سبز", "زرد", "مشکی", "سفید", "نارنجی", "بنفش", "صورتی", "قهوه ای", "خاکستری", "طلایی"]},
     {"category": "کشور", "accepted": ["ایران", "آلمان", "فرانسه", "ایتالیا", "ژاپن", "چین", "هند", "برزیل", "ترکیه", "مصر", "کانادا", "روسیه", "اسپانیا"]},
     {"category": "ورزش", "accepted": ["فوتبال", "والیبال", "بسکتبال", "تنیس", "شنا", "کشتی", "جودو", "بوکس", "شطرنج", "دوچرخه", "دو"]},
+]
+
+WHOAMI_BANK = [
+    {"name": "فردوسی", "aliases": ["حکیم فردوسی"], "clues": ["شاعر ایرانی‌ام", "شاهنامه را سرودم", "از توس هستم"]},
+    {"name": "حافظ", "aliases": ["خواجه حافظ"], "clues": ["غزل می‌گویم", "از شیراز هستم", "دیوانم فال گرفته می‌شود"]},
+    {"name": "انیشتین", "aliases": ["اینشتین", "آلبرت اینشتین", "آلبرت انیشتین"], "clues": ["فیزیکدانم", "نسبیت را مطرح کردم", "موهای ژولیده‌ام معروف است"]},
+    {"name": "پله", "aliases": [], "clues": ["فوتبالیستم", "برزیلی‌ام", "سه جام جهانی بردم"]},
+    {"name": "هری پاتر", "aliases": ["هری"], "clues": ["جادوگرم", "عینک گرد دارم", "در هاگوارتز درس خواندم"]},
+]
+QUOTE_BANK = [
+    ("می‌خواهم تنها باشم", "گوزنها", ["گوزن‌ها"]),
+    ("تو نمی‌تونی این کارو با من بکنی", "کلاه قرمزی", []),
+    ("من انتقام می‌گیرم", "سوپرمن", []),
+    ("قدرت زیاد مسئولیت زیاد می‌آورد", "مرد عنکبوتی", ["اسپایدرمن", "اسپایدر من"]),
+]
+ODD_BANK = [
+    {"options": ["سیب", "موز", "هلو", "گربه"], "odd": 3, "why": "گربه میوه نیست"},
+    {"options": ["ایران", "فرانسه", "تهران", "ژاپن"], "odd": 2, "why": "تهران کشور نیست"},
+    {"options": ["فوتبال", "والیبال", "شطرنج", "شنا"], "odd": 2, "why": "شطرنج ورزش توپی نیست"},
+    {"options": ["قرمز", "آبی", "میز", "سبز"], "odd": 2, "why": "میز رنگ نیست"},
+]
+YEAR_BANK = [
+    {"q": "پیروزی انقلاب ایران", "year": 1357},
+    {"q": "اولین جام جهانی فوتبال", "year": 1930},
+    {"q": "فرود انسان روی ماه", "year": 1969},
+    {"q": "شروع جنگ جهانی دوم", "year": 1939},
+    {"q": "تأسیس تلگرام", "year": 2013},
+]
+LIE_BANK = [
+    {"a": "هشت پای یک اختاپوس هشت تاست", "b": "پنگوئن می‌تواند پرواز کند", "c": "الماس از کربن ساخته شده", "lie": "b"},
+    {"a": "خورشید یک ستاره است", "b": "آب در صفر درجه یخ می‌زند", "c": "نهنگ یک ماهی است", "lie": "c"},
+    {"a": "ایران چهار فصل دارد", "b": "قله دماوند در ترکیه است", "c": "نوروز جشن بهار است", "lie": "b"},
 ]
 
 COLOR_CHOICES = [("قرمز", "🔴"), ("سبز", "🟢"), ("آبی", "🔵"), ("زرد", "🟡")]
@@ -1123,6 +1167,12 @@ async def game_trigger_handler(update: Update, context: ContextTypes.DEFAULT_TYP
         "memory": start_memory_game,
         "colors": start_color_game,
         "category": start_category_game,
+        "whoami": start_whoami_game,
+        "oddone": start_oddone_game,
+        "quote": start_quote_game,
+        "year": start_year_game,
+        "codes": start_codes_game,
+        "lie": start_lie_game,
     }
     starter = starters.get(key)
     if starter:
@@ -2066,6 +2116,255 @@ async def start_category_game(update: Update, context: ContextTypes.DEFAULT_TYPE
         await safe_reply(update, context, text, reply_markup=skip_kb("cat:skip"))
 
 
+async def start_whoami_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+    if chat_id in WHOAMI_GAMES:
+        g = WHOAMI_GAMES[chat_id]
+        shown = " / ".join(g["clues"][: g["shown"]])
+        await safe_reply(update, context, f"یک «کی هستم» فعاله:\n{shown}")
+        return
+    wait = await safe_reply(update, context, "⏳ دارم یه شخصیت تازه می‌سازم...")
+    item = None
+    data = await generate_game_json(
+        "یک شخصیت معروف (ایرانی یا جهانی) برای بازی کی‌هستم بساز. سه سرنخ از آسان به سخت نده؛ از مبهم به واضح. "
+        f"{_recent_hint('whoami')} "
+        'JSON: {"name":"...","aliases":["..."],"clues":["سرنخ1","سرنخ2","سرنخ3"]}'
+    )
+    if data and data.get("name") and isinstance(data.get("clues"), list) and len(data["clues"]) >= 2:
+        item = {
+            "name": str(data["name"])[:40],
+            "aliases": [str(a) for a in (data.get("aliases") or [])][:6],
+            "clues": [str(c)[:80] for c in data["clues"][:4]],
+        }
+        remember_content("whoami", item["name"])
+    if not item:
+        item = pick_unused(WHOAMI_BANK, lambda x: x["name"], "whoami")
+    WHOAMI_GAMES[chat_id] = {**item, "shown": 1}
+    text = f"🕵️ کی هستم؟\nسرنخ ۱: {item['clues'][0]}\n\nاسم را بنویس، یا سرنخ بعدی را بگیر."
+    kb = InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton("💡 سرنخ بعدی", callback_data="who:hint")],
+            [InlineKeyboardButton("⏭️ لو دادن", callback_data="who:skip")],
+        ]
+    )
+    try:
+        await wait.edit_text(text, reply_markup=kb)
+    except Exception:
+        await safe_reply(update, context, text, reply_markup=kb)
+
+
+async def whoami_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    chat_id = update.effective_chat.id
+    game = WHOAMI_GAMES.get(chat_id)
+    if not game:
+        await safe_answer(query, "بازی فعالی نیست.", show_alert=True)
+        return
+    action = query.data.split(":")[1]
+    if action == "skip":
+        await safe_answer(query)
+        await context.bot.send_message(chat_id, f"⏭️ لو رفت! جواب «{game['name']}» بود.")
+        del WHOAMI_GAMES[chat_id]
+        return
+    if game["shown"] >= len(game["clues"]):
+        await safe_answer(query, "سرنخ دیگری نمانده.", show_alert=True)
+        return
+    game["shown"] += 1
+    clues = "\n".join(f"سرنخ {i+1}: {c}" for i, c in enumerate(game["clues"][: game["shown"]]))
+    await safe_answer(query)
+    kb = InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton("💡 سرنخ بعدی", callback_data="who:hint")],
+            [InlineKeyboardButton("⏭️ لو دادن", callback_data="who:skip")],
+        ]
+    )
+    await safe_edit(query, f"🕵️ کی هستم؟\n{clues}\n\nاسم را بنویس 👇", reply_markup=kb)
+
+
+async def start_oddone_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+    for g in ODDONE_GAMES.values():
+        if g["chat_id"] == chat_id:
+            await safe_reply(update, context, "یک گزینه ناجور همین الان فعاله.")
+            return
+    wait = await safe_reply(update, context, "⏳ دارم گزینه‌ها را می‌چینم...")
+    item = None
+    data = await generate_game_json(
+        "چهار گزینه فارسی بساز که یکی از آن‌ها با بقیه فرق داشته باشد. "
+        f"{_recent_hint('oddone')} "
+        'JSON: {"options":["الف","ب","ج","د"],"odd":2,"why":"چرا"} odd ایندکس ۰ تا ۳ است.'
+    )
+    if data and isinstance(data.get("options"), list) and len(data["options"]) == 4:
+        try:
+            odd = int(data.get("odd"))
+        except (TypeError, ValueError):
+            odd = -1
+        if 0 <= odd <= 3:
+            item = {
+                "options": [str(o)[:30] for o in data["options"]],
+                "odd": odd,
+                "why": str(data.get("why") or "")[:80],
+            }
+            remember_content("oddone", item["options"][odd])
+    if not item:
+        item = pick_unused(ODD_BANK, lambda x: "|".join(x["options"]), "oddone")
+    session_id = new_session_id()
+    ODDONE_GAMES[session_id] = {"chat_id": chat_id, **item, "winner": None}
+    kb = InlineKeyboardMarkup(
+        [[InlineKeyboardButton(opt, callback_data=f"odd:{session_id}:{i}")] for i, opt in enumerate(item["options"])]
+    )
+    text = "🚫 گزینه ناجور!\nکدام یکی با بقیه فرق دارد؟"
+    try:
+        await wait.edit_text(text, reply_markup=kb)
+    except Exception:
+        await safe_reply(update, context, text, reply_markup=kb)
+
+
+async def oddone_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    _, session_id, idx = query.data.split(":")
+    idx = int(idx)
+    game = ODDONE_GAMES.get(session_id)
+    if not game or game.get("winner"):
+        await safe_answer(query, "این دور تموم شده.", show_alert=True)
+        return
+    if idx != game["odd"]:
+        await safe_answer(query, "این یکی ناجور نیست!", show_alert=True)
+        return
+    user = update.effective_user
+    remember_user(user)
+    game["winner"] = user.id
+    why = f"\n{game['why']}" if game.get("why") else ""
+    await safe_answer(query, "درست بود!")
+    await safe_edit(query, f"🚫 گزینه ناجور: «{game['options'][game['odd']]}»{why}\n🏆 {user.full_name}")
+    del ODDONE_GAMES[session_id]
+
+
+async def start_quote_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+    if chat_id in QUOTE_GAMES:
+        await safe_reply(update, context, f"یک حدس فیلم فعاله:\n«{QUOTE_GAMES[chat_id]['quote']}»")
+        return
+    wait = await safe_reply(update, context, "⏳ دارم یه دیالوگ تازه می‌آورم...")
+    quote = answer = None
+    aliases = []
+    data = await generate_game_json(
+        "یک دیالوگ کوتاه معروف از فیلم یا انیمیشن بساز که برای ایرانی‌ها آشنا باشد. "
+        f"{_recent_hint('quote')} "
+        'JSON: {"quote":"...","answer":"نام فیلم","aliases":["..."]}'
+    )
+    if data and data.get("quote") and data.get("answer"):
+        quote, answer = str(data["quote"])[:160], str(data["answer"])[:40]
+        aliases = [str(a) for a in (data.get("aliases") or [])][:6]
+        remember_content("quote", answer)
+    if not quote:
+        quote, answer, aliases = pick_unused(QUOTE_BANK, lambda x: x[1], "quote")
+    QUOTE_GAMES[chat_id] = {"quote": quote, "answer": answer, "aliases": aliases}
+    text = f"🎬 حدس فیلم!\n\n«{quote}»\n\nاسم فیلم را بنویس 👇"
+    try:
+        await wait.edit_text(text, reply_markup=skip_kb("quo:skip"))
+    except Exception:
+        await safe_reply(update, context, text, reply_markup=skip_kb("quo:skip"))
+
+
+async def start_year_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+    if chat_id in YEAR_GAMES:
+        await safe_reply(update, context, f"یک حدس سال فعاله: {YEAR_GAMES[chat_id]['q']}")
+        return
+    wait = await safe_reply(update, context, "⏳ دارم یه رویداد تازه می‌آورم...")
+    item = None
+    data = await generate_game_json(
+        "یک رویداد معروف تاریخی یا ورزشی با سال میلادی درست بساز. "
+        f"{_recent_hint('year')} "
+        'JSON: {"q":"فرود انسان روی ماه","year":1969}'
+    )
+    if data and data.get("q"):
+        try:
+            year = int(data.get("year"))
+        except (TypeError, ValueError):
+            year = 0
+        if 1000 <= year <= 2100:
+            item = {"q": str(data["q"])[:120], "year": year}
+            remember_content("year", item["q"])
+    if not item:
+        item = pick_unused(YEAR_BANK, lambda x: x["q"], "year")
+    YEAR_GAMES[chat_id] = item
+    text = f"📅 حدس سال!\n{item['q']} در چه سالی بود؟\n(فقط عدد سال را بفرست)"
+    try:
+        await wait.edit_text(text, reply_markup=skip_kb("yea:skip"))
+    except Exception:
+        await safe_reply(update, context, text, reply_markup=skip_kb("yea:skip"))
+
+
+async def start_codes_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+    if chat_id in CODE_GAMES:
+        await safe_reply(update, context, f"یک کد سریع فعاله: `{CODE_GAMES[chat_id]['code']}`")
+        return
+    code = "".join(random.choices(string.ascii_lowercase + string.digits, k=6))
+    CODE_GAMES[chat_id] = {"code": code}
+    await safe_reply(update, context, f"⚡ کد سریع!\nاولین نفری که دقیقاً این را بفرستد می‌برد:\n\n{code}")
+
+
+async def start_lie_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+    for g in LIE_GAMES.values():
+        if g["chat_id"] == chat_id:
+            await safe_reply(update, context, "یک «دروغه کدومه» فعاله.")
+            return
+    wait = await safe_reply(update, context, "⏳ دارم دو حقیقت و یک دروغ می‌سازم...")
+    item = None
+    data = await generate_game_json(
+        "سه جمله کوتاه فارسی بساز: دو تا درست، یکی غلط. مشخص کن کدام دروغ است. "
+        f"{_recent_hint('lie')} "
+        'JSON: {"a":"...","b":"...","c":"...","lie":"b"} lie یکی از a یا b یا c است.'
+    )
+    if data and data.get("a") and data.get("b") and data.get("c") and str(data.get("lie", "")).lower() in ("a", "b", "c"):
+        item = {
+            "a": str(data["a"])[:90],
+            "b": str(data["b"])[:90],
+            "c": str(data["c"])[:90],
+            "lie": str(data["lie"]).lower(),
+        }
+        remember_content("lie", item["a"])
+    if not item:
+        item = pick_unused(LIE_BANK, lambda x: x["a"], "lie")
+    session_id = new_session_id()
+    LIE_GAMES[session_id] = {"chat_id": chat_id, **item, "winner": None}
+    kb = InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton(f"A) {item['a']}", callback_data=f"lie:{session_id}:a")],
+            [InlineKeyboardButton(f"B) {item['b']}", callback_data=f"lie:{session_id}:b")],
+            [InlineKeyboardButton(f"C) {item['c']}", callback_data=f"lie:{session_id}:c")],
+        ]
+    )
+    text = "🤥 دروغه کدومه؟\nروی جمله‌ی غلط بزن."
+    try:
+        await wait.edit_text(text, reply_markup=kb)
+    except Exception:
+        await safe_reply(update, context, text, reply_markup=kb)
+
+
+async def lie_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    _, session_id, choice = query.data.split(":")
+    game = LIE_GAMES.get(session_id)
+    if not game or game.get("winner"):
+        await safe_answer(query, "این دور تموم شده.", show_alert=True)
+        return
+    if choice != game["lie"]:
+        await safe_answer(query, "این یکی دروغ نیست!", show_alert=True)
+        return
+    user = update.effective_user
+    remember_user(user)
+    game["winner"] = user.id
+    lie_text = game[game["lie"]]
+    await safe_answer(query, "درست بود!")
+    await safe_edit(query, f"🤥 دروغ این بود:\n«{lie_text}»\n🏆 {user.full_name}")
+    del LIE_GAMES[session_id]
+
+
 async def generic_skip_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     data = query.data
@@ -2078,6 +2377,8 @@ async def generic_skip_callback(update: Update, context: ContextTypes.DEFAULT_TY
         "prv:skip": (PROVERB_GAMES, "full", "ضرب‌المثل"),
         "mem:skip": (MEMORY_GAMES, "target", "حافظه"),
         "cat:skip": (CATEGORY_GAMES, "category", "دسته"),
+        "quo:skip": (QUOTE_GAMES, "answer", "حدس فیلم"),
+        "yea:skip": (YEAR_GAMES, "year", "حدس سال"),
     }
     info = mapping.get(data)
     if not info:
@@ -2121,6 +2422,17 @@ async def active_game_text_handler(update: Update, context: ContextTypes.DEFAULT
                 )
                 del MATH_GAMES[chat_id]
                 raise ApplicationHandlerStop
+        year_game = YEAR_GAMES.get(chat_id)
+        if year_game and is_game_enabled("year") and value >= 1000:
+            remember_user(user)
+            if value == year_game["year"]:
+                await safe_reply(update, context, f"📅 {user.full_name} درست گفت! سال {year_game['year']} بود.")
+                del YEAR_GAMES[chat_id]
+            elif value < year_game["year"]:
+                await safe_reply(update, context, "⬆️ دیرتر / بزرگ‌تره!")
+            else:
+                await safe_reply(update, context, "⬇️ زودتر / کوچیک‌تره!")
+            raise ApplicationHandlerStop
         guess_game = GUESS_GAMES.get(chat_id)
         if guess_game and is_game_enabled("guess"):
             remember_user(user)
@@ -2328,7 +2640,10 @@ def main():
     app.add_handler(CallbackQueryHandler(emoji_skip_callback, pattern=r"^emj:"))
     app.add_handler(CallbackQueryHandler(blackjack_action_callback, pattern=r"^bj:"))
     app.add_handler(CallbackQueryHandler(color_callback, pattern=r"^clr:"))
-    app.add_handler(CallbackQueryHandler(generic_skip_callback, pattern=r"^(scr|rid|flg|chn|prv|mem|cat):"))
+    app.add_handler(CallbackQueryHandler(whoami_callback, pattern=r"^who:"))
+    app.add_handler(CallbackQueryHandler(oddone_callback, pattern=r"^odd:"))
+    app.add_handler(CallbackQueryHandler(lie_callback, pattern=r"^lie:"))
+    app.add_handler(CallbackQueryHandler(generic_skip_callback, pattern=r"^(scr|rid|flg|chn|prv|mem|cat|quo|yea):"))
 
     logger.info("Bot starting with %s Groq keys...", len(GROQ_API_KEYS))
     app.run_polling(allowed_updates=Update.ALL_TYPES)
