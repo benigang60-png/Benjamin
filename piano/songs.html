@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>آهنگ‌ها — پیانو استودیو</title>
+<link rel="stylesheet" href="site.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎹</text></svg>">
+</head>
+<body>
+<nav class="nav"><div class="container">
+  <a class="brand" href="index.html">🎹 پیانو <em>استودیو</em></a>
+  <button class="burger" onclick="document.getElementById('m').classList.toggle('open')">☰</button>
+  <ul id="m">
+    <li><a class="lnk" href="index.html">خانه</a></li>
+    <li><a class="lnk on" href="songs.html">آهنگ‌ها</a></li>
+    <li><a class="lnk" href="learn.html">آموزش</a></li>
+    <li><a class="lnk" href="play.html">نواختن</a></li>
+  </ul>
+  <a class="navCta" href="play.html">▶ شروع نواختن</a>
+</div></nav>
+
+<section class="blk" style="border:none;padding-top:44px"><div class="container">
+  <h2 class="st">کتابخانه آهنگ‌ها</h2>
+  <p class="sub">۱۸ آهنگ با نت واقعی. روی هرکدام بزنی، مستقیم در حالت آموزش باز می‌شود.</p>
+  <input class="searchBox" id="q" placeholder="🔍 جست‌وجوی آهنگ…">
+  <div class="filters" id="f"></div>
+  <div class="grid g4" id="list"></div>
+  <p class="sub" id="empty" style="display:none;margin-top:24px">آهنگی پیدا نشد 🤔</p>
+</div></section>
+
+<footer><div class="container">
+  <a href="index.html">خانه</a> · <a href="learn.html">آموزش</a> · <a href="play.html">نواختن</a>
+</div></footer>
+
+<script src="catalog.js"></script>
+<script>
+const cats=['همه',...new Set(CATALOG.map(s=>s.cat)),'آسان','متوسط','سخت'];
+let active='همه', term='';
+const fEl=document.getElementById('f');
+fEl.innerHTML=cats.map(c=>`<button data-c="${c}"${c===active?' class="on"':''}>${c}</button>`).join('');
+fEl.onclick=e=>{ if(e.target.dataset.c){active=e.target.dataset.c;
+  [...fEl.children].forEach(b=>b.classList.toggle('on',b.dataset.c===active)); render();}};
+document.getElementById('q').oninput=e=>{term=e.target.value.trim().toLowerCase();render();};
+function render(){
+  const out=CATALOG.filter(s=>{
+    const okC = active==='همه' || s.cat===active || DIFN[s.dif]===active;
+    const okT = !term || (s.name+' '+s.info).toLowerCase().includes(term);
+    return okC&&okT;
+  });
+  document.getElementById('empty').style.display=out.length?'none':'block';
+  document.getElementById('list').innerHTML=out.map(s=>`
+    <a class="songCard" href="play.html?song=${s.id}">
+      <b>${s.ico} ${s.name}</b><small>${s.info}</small>
+      <div class="tagRow"><span class="tag">${s.cat}</span><span class="tag ${s.dif}">${DIFN[s.dif]}</span></div>
+    </a>`).join('');
+}
+render();
+</script>
+</body>
+</html>

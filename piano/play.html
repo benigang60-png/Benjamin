@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>نواختن — پیانو استودیو</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎹</text></svg>">
+<style>
+  .sitenav{position:sticky;top:0;z-index:60;border-bottom:1px solid #243254;background:rgba(10,14,25,.9);backdrop-filter:blur(10px)}
+  .sitenav .in{max-width:1100px;margin:0 auto;padding:0 16px;height:54px;display:flex;align-items:center;gap:10px}
+  .sitenav a{color:#93a2c6;text-decoration:none;font-size:13px;padding:7px 13px;border-radius:99px}
+  .sitenav a:hover{color:#e8edf9;background:#1b2542}
+  .sitenav a.br{font-weight:800;font-size:17px;color:#e8edf9;padding-inline-start:0}
+  .sitenav a.br em{font-style:normal;color:#ffd23f}
+  .sitenav a.on{background:linear-gradient(180deg,#ffd23f,#f0a91c);color:#231b00;font-weight:700}
+  .sitenav .sp{margin-inline-start:auto}
+</style>
+<style>
+  :root{
+    --bg:#0b0f1a; --bg2:#121a2e; --card:#161f38; --line:#243254;
+    --txt:#e8edf9; --mut:#93a2c6; --acc:#ffd23f; --acc2:#4ea8ff; --ok:#38d39f;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%}
+  body{
+    background:radial-gradient(1200px 700px at 50% -10%,#1d2a4d 0%,var(--bg) 60%);
+    color:var(--txt);font-family:"Vazirmatn",Tahoma,system-ui,sans-serif;
+    display:flex;flex-direction:column;min-height:100vh;overflow-x:hidden;
+  }
+  header{
+    padding:12px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+    border-bottom:1px solid var(--line);background:rgba(10,14,25,.7);backdrop-filter:blur(8px);
+    position:sticky;top:54px;z-index:30;
+  }
+  h1{font-size:18px;margin:0;letter-spacing:.3px}
+  h1 span{color:var(--acc)}
+  .tabs{display:flex;gap:6px;margin-inline-start:auto;flex-wrap:wrap}
+  .tab{
+    background:var(--card);border:1px solid var(--line);color:var(--mut);
+    padding:8px 14px;border-radius:999px;cursor:pointer;font-size:13px;font-family:inherit;transition:.15s;
+  }
+  .tab:hover{color:var(--txt);border-color:#38507f}
+  .tab.on{background:linear-gradient(180deg,#ffd23f,#f0a91c);color:#221a00;border-color:#ffd23f;font-weight:700}
+  main{flex:1;padding:14px;display:flex;flex-direction:column;gap:14px}
+  .panel{display:none;flex-direction:column;gap:14px}
+  .panel.on{display:flex}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .lbl{font-size:12px;color:var(--mut)}
+  button.btn{
+    background:linear-gradient(180deg,#233258,#1a2544);border:1px solid var(--line);color:var(--txt);
+    padding:9px 16px;border-radius:10px;cursor:pointer;font-size:13px;font-family:inherit;transition:.15s
+  }
+  button.btn:hover{border-color:#4ea8ff;transform:translateY(-1px)}
+  button.btn.primary{background:linear-gradient(180deg,#4ea8ff,#2b7fd6);border-color:#4ea8ff;color:#04121f;font-weight:700}
+  button.btn.gold{background:linear-gradient(180deg,#ffd23f,#eaa50f);border-color:#ffd23f;color:#231b00;font-weight:700}
+  button.btn.danger{background:linear-gradient(180deg,#ff6b6b,#d63f3f);border-color:#ff6b6b;color:#2a0505;font-weight:700}
+  select,input[type=range]{font-family:inherit}
+  select{background:#0f1729;color:var(--txt);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:13px}
+  input[type=range]{accent-color:var(--acc);width:130px}
+
+  /* songs list */
+  .songs{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;max-height:260px;overflow:auto;padding-inline-end:4px}
+  .song{
+    background:#0f1729;border:1px solid var(--line);border-radius:12px;padding:10px 12px;cursor:pointer;transition:.15s
+  }
+  .song:hover{border-color:#4ea8ff}
+  .song.on{border-color:var(--acc);background:#241f0c;box-shadow:0 0 0 1px var(--acc) inset}
+  .song b{display:block;font-size:14px}
+  .song small{color:var(--mut);font-size:11px}
+
+  /* keyboard */
+  .kbWrap{overflow-x:auto;overflow-y:hidden;padding:6px 0 16px}
+  .kb{position:relative;display:flex;justify-content:center;min-width:max-content;margin:0 auto;user-select:none;padding:0 8px}
+  .wk{
+    position:relative;width:46px;height:200px;margin:0 1.5px;border-radius:0 0 8px 8px;
+    background:linear-gradient(180deg,#fff 0%,#eceff7 78%,#cfd6e6 100%);
+    border:1px solid #9aa5bd;border-top:none;box-shadow:0 4px 6px rgba(0,0,0,.45);
+    display:flex;align-items:flex-end;justify-content:center;padding-bottom:8px;
+    font-size:10px;color:#8b93a7;cursor:pointer;transition:background .05s,transform .05s;flex:0 0 auto;
+  }
+  .wk.hint{background:linear-gradient(180deg,#fff3b0,#ffd23f 85%);color:#6a5200;box-shadow:0 0 16px rgba(255,210,63,.7),0 4px 6px rgba(0,0,0,.4)}
+  .wk.next{background:linear-gradient(180deg,#c9ffe6,#38d39f 85%);color:#064;box-shadow:0 0 18px rgba(56,211,159,.8)}
+  .wk.act{background:linear-gradient(180deg,#9ed0ff,#4ea8ff 90%);transform:translateY(2px)}
+  .bkHolder{position:absolute;inset:0;pointer-events:none}
+  .bk{
+    position:absolute;top:0;width:30px;height:125px;border-radius:0 0 6px 6px;
+    background:linear-gradient(180deg,#3a4460 0%,#141a29 70%,#0a0e18 100%);
+    border:1px solid #000;box-shadow:0 5px 8px rgba(0,0,0,.6);z-index:5;cursor:pointer;pointer-events:auto;
+    display:flex;align-items:flex-end;justify-content:center;padding-bottom:6px;font-size:9px;color:#6b7590;
+    transition:background .05s,transform .05s;
+  }
+  .bk.hint{background:linear-gradient(180deg,#ffe27a,#d9a300 90%);color:#3a2c00;box-shadow:0 0 16px rgba(255,210,63,.8)}
+  .bk.next{background:linear-gradient(180deg,#7ff0c6,#12a377 90%);color:#03291d;box-shadow:0 0 18px rgba(56,211,159,.85)}
+  .bk.act{background:linear-gradient(180deg,#4ea8ff,#1b5fa8);transform:translateY(2px)}
+
+  .badge{background:#0f1729;border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:12px;color:var(--mut)}
+  .badge b{color:var(--acc)}
+  .bar{height:8px;background:#0f1729;border:1px solid var(--line);border-radius:99px;overflow:hidden;flex:1;min-width:140px}
+  .bar > i{display:block;height:100%;width:0;background:linear-gradient(90deg,#38d39f,#4ea8ff);transition:width .12s}
+  .pads{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
+  .pad{
+    background:linear-gradient(180deg,#2b3a63,#1a2440);border:1px solid var(--line);border-radius:12px;
+    padding:14px 6px;text-align:center;font-size:12px;cursor:pointer;transition:.08s
+  }
+  .pad:active,.pad.act{background:linear-gradient(180deg,#ff6b6b,#c33);transform:scale(.96)}
+  .hintText{font-size:12px;color:var(--mut);line-height:1.9}
+  .lyric{font-size:13px;color:var(--acc2);min-height:20px}
+  @media(max-width:640px){
+    .wk{width:38px;height:170px}.bk{width:25px;height:106px}
+    h1{font-size:15px}.tab{padding:7px 11px;font-size:12px}
+  }
+</style>
+</head>
+<body>
+<nav class="sitenav"><div class="in">
+  <a class="br" href="index.html">🎹 پیانو <em>استودیو</em></a>
+  <span class="sp"></span>
+  <a href="index.html">خانه</a>
+  <a href="songs.html">آهنگ‌ها</a>
+  <a href="learn.html">آموزش</a>
+  <a class="on" href="play.html">نواختن</a>
+</div></nav>
+<header>
+  <h1>🎹 پیانو <span>استودیو</span></h1>
+  <div class="tabs">
+    <button class="tab on" data-tab="learn">🎓 آموزش آهنگ</button>
+    <button class="tab" data-tab="free">🎨 پیانوی آزاد</button>
+    <button class="tab" data-tab="drum">🥁 درام و پد</button>
+    <button class="tab" data-tab="help">❓ راهنما</button>
+  </div>
+</header>
+
+<main>
+  <!-- ============ LEARN ============ -->
+  <section class="panel on" id="p-learn">
+    <div class="card">
+      <div class="row" style="margin-bottom:10px">
+        <b style="font-size:14px">🎵 آهنگ‌ها</b>
+        <span class="lbl">یک آهنگ را انتخاب کن، کلیدهای زرد را به ترتیب بزن.</span>
+      </div>
+      <div class="songs" id="songList"></div>
+    </div>
+
+    <div class="card">
+      <div class="row">
+        <button class="btn gold" id="btnTeach">🎓 حالت آموزش</button>
+        <button class="btn primary" id="btnAuto">▶️ پخش خودکار</button>
+        <button class="btn danger" id="btnStop">⏹ توقف</button>
+        <span class="lbl">ساز:</span>
+        <select id="insSel"></select>
+        <span class="lbl">سرعت</span><input type="range" id="tempo" min="40" max="180" value="100">
+        <span class="badge" id="tempoV">۱۰۰٪</span>
+        <span class="lbl">صدا</span><input type="range" id="vol" min="0" max="100" value="70">
+        <label class="lbl"><input type="checkbox" id="chkNames" checked> نمایش نام نت</label>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <span class="badge">آهنگ: <b id="curName">—</b></span>
+        <span class="badge">نت <b id="curStep">0</b> از <b id="curTotal">0</b></span>
+        <span class="badge">امتیاز: <b id="score">0</b></span>
+        <div class="bar"><i id="prog"></i></div>
+      </div>
+      <div class="row" style="margin-top:8px"><div class="lyric" id="msg">آماده‌ای؟ یک آهنگ انتخاب کن 🎶</div></div>
+    </div>
+  </section>
+
+  <!-- ============ FREE ============ -->
+  <section class="panel" id="p-free">
+    <div class="card">
+      <div class="row">
+        <b style="font-size:14px">🎨 پیانوی آزاد</b>
+        <span class="lbl">هرچی دوست داری بزن! با ماوس، لمس، یا کیبورد کامپیوتر.</span>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <span class="lbl">ساز:</span><select id="insSel2"></select>
+        <button class="btn" id="btnRec">⏺ ضبط</button>
+        <button class="btn" id="btnPlayRec">▶️ پخش ضبط</button>
+        <button class="btn" id="btnClrRec">🗑 پاک کردن</button>
+        <label class="lbl"><input type="checkbox" id="chkSus"> پدال ساستین (Space)</label>
+        <span class="badge" id="recInfo">۰ نت ضبط شده</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ DRUM ============ -->
+  <section class="panel" id="p-drum">
+    <div class="card">
+      <div class="row" style="margin-bottom:10px"><b style="font-size:14px">🥁 پدهای کوبه‌ای</b>
+      <span class="lbl">کلیدهای ۱ تا ۸ کیبورد هم کار می‌کنند.</span></div>
+      <div class="pads" id="padGrid"></div>
+    </div>
+    <div class="card">
+      <div class="row"><b style="font-size:14px">🔁 ریتم خودکار</b>
+        <button class="btn primary" id="btnBeat">▶️ شروع ریتم</button>
+        <select id="beatSel">
+          <option value="rock">راک</option><option value="pop">پاپ</option>
+          <option value="hiphop">هیپ‌هاپ</option><option value="waltz">والس</option>
+        </select>
+        <span class="lbl">BPM</span><input type="range" id="bpm" min="60" max="180" value="100">
+        <span class="badge" id="bpmV">100</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ HELP ============ -->
+  <section class="panel" id="p-help">
+    <div class="card hintText">
+      <b>راهنمای سریع</b><br>
+      • <b>حالت آموزش:</b> کلید <span style="color:#ffd23f">زرد</span> = نتی که باید بزنی. کلید <span style="color:#38d39f">سبز</span> = نت بعدی.
+      وقتی درست بزنی خودکار می‌رود جلو.<br>
+      • <b>پخش خودکار:</b> آهنگ خودش نواخته می‌شود تا ملودی را یاد بگیری.<br>
+      • <b>کیبورد کامپیوتر:</b> ردیف <code>Z X C V B N M</code> و <code>Q W E R T Y U</code> و ردیف بالا برای اکتاوهای بالاتر؛
+      کلیدهای سیاه روی <code>S D G H J</code> و <code>2 3 5 6 7</code>.<br>
+      • <b>Space</b> = پدال ساستین، <b>←/→</b> = جابه‌جایی اکتاو.<br>
+      • صدای هر نت با رها کردن کلید محو می‌شود (بدون گیر کردن صدا).
+    </div>
+  </section>
+
+  <!-- shared keyboard -->
+  <div class="card" style="padding:8px 4px">
+    <div class="row" style="justify-content:center;gap:8px;margin-bottom:6px">
+      <button class="btn" id="octDown">⬅️ اکتاو</button>
+      <span class="badge">محدوده: <b id="rangeLbl"></b></span>
+      <button class="btn" id="octUp">اکتاو ➡️</button>
+      <button class="btn danger" id="panic">🔇 قطع همه صداها</button>
+    </div>
+    <div class="kbWrap"><div class="kb" id="kb"></div></div>
+  </div>
+</main>
+
+<script>
+/* ================= AUDIO ENGINE ================= */
+let AC=null, master=null, comp=null;
+function ac(){
+  if(!AC){
+    AC=new (window.AudioContext||window.webkitAudioContext)();
+    comp=AC.createDynamicsCompressor();
+    comp.threshold.value=-18; comp.knee.value=20; comp.ratio.value=8; comp.attack.value=.003; comp.release.value=.25;
+    master=AC.createGain(); master.gain.value=.7;
+    master.connect(comp); comp.connect(AC.destination);
+  }
+  if(AC.state==='suspended') AC.resume();
+  return AC;
+}
+const NOTES=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+function freq(n){ // e.g. "C#4"
+  const m=/^([A-G]#?)(-?\d)$/.exec(n); if(!m) return 440;
+  return 440*Math.pow(2,(NOTES.indexOf(m[1])+(+m[2]+1)*12-69)/12);
+}
+const INSTRUMENTS={
+  piano:{name:'🎹 پیانو',     type:'triangle', a:.005,d:.9, s:.22,r:.35, det:6, sub:.55, hcut:5200},
+  epiano:{name:'🎛 پیانوی برقی',type:'sine',    a:.008,d:1.5,s:.35,r:.45, det:8, sub:.7,  hcut:4200},
+  guitar:{name:'🎸 گیتار',     type:'sawtooth', a:.004,d:.55,s:.10,r:.28, det:10,sub:.35, hcut:2600},
+  organ:{name:'🎵 ارگ',        type:'square',   a:.01, d:.2, s:.75,r:.18, det:4, sub:.6,  hcut:3000},
+  strings:{name:'🎻 زهی',      type:'sawtooth', a:.12, d:.5, s:.7, r:.6,  det:12,sub:.5,  hcut:3400},
+  bell:{name:'🔔 زنگ',         type:'sine',     a:.002,d:1.8,s:.05,r:.9,  det:3, sub:.4,  hcut:7000},
+  synth:{name:'🌈 سینت',       type:'sawtooth', a:.01, d:.4, s:.5, r:.3,  det:16,sub:.6,  hcut:4000},
+  bass:{name:'🎺 بیس',         type:'square',   a:.01, d:.6, s:.4, r:.25, det:5, sub:.9,  hcut:1200}
+};
+let curIns='piano', sustain=false;
+const live=new Map();          // noteName -> voice object
+const allVoices=new Set();
+
+function makeVoice(note,vel=1,insKey=curIns){
+  const C=ac(), I=INSTRUMENTS[insKey]||INSTRUMENTS.piano, f=freq(note), t=C.currentTime;
+  const g=C.createGain(), lp=C.createBiquadFilter();
+  lp.type='lowpass'; lp.frequency.value=I.hcut; lp.Q.value=.4;
+  const oscs=[];
+  const spec=[[f,1,0],[f,.5,I.det],[f*2,.28,-I.det],[f/2,I.sub*.35,0]];
+  spec.forEach(([fr,amp,det])=>{
+    const o=C.createOscillator(), og=C.createGain();
+    o.type=I.type; o.frequency.value=fr; o.detune.value=det;
+    og.gain.value=amp*.22; o.connect(og); og.connect(lp); o.start(t); oscs.push(o);
+  });
+  lp.connect(g); g.connect(master);
+  const peak=Math.max(.05,Math.min(1,vel))*.9;
+  g.gain.cancelScheduledValues(t);
+  g.gain.setValueAtTime(0.0001,t);
+  g.gain.linearRampToValueAtTime(peak,t+I.a);
+  g.gain.setTargetAtTime(peak*I.s+0.0001,t+I.a,I.d*.5);
+  const v={note,g,oscs,I,dead:false,
+    stop(rel){
+      if(v.dead) return; v.dead=true;
+      const now=C.currentTime, R=rel!=null?rel:v.I.r;
+      try{
+        v.g.gain.cancelScheduledValues(now);
+        v.g.gain.setValueAtTime(Math.max(v.g.gain.value,0.0001),now);
+        v.g.gain.exponentialRampToValueAtTime(0.0001,now+R);
+      }catch(e){}
+      v.oscs.forEach(o=>{try{o.stop(now+R+.05)}catch(e){}});
+      setTimeout(()=>{try{v.g.disconnect()}catch(e){} allVoices.delete(v);},(R+.12)*1000);
+    }};
+  allVoices.add(v);
+  return v;
+}
+function noteOn(note,vel=1){
+  const prev=live.get(note);
+  if(prev) prev.stop(.05);                 // retrigger cleanly (no stuck sound)
+  const v=makeVoice(note,vel);
+  live.set(note,v);
+  keyEl(note)?.classList.add('act');
+  if(recording) recNotes.push({note,t:performance.now()-recT0,ins:curIns});
+  return v;
+}
+function noteOff(note){
+  const v=live.get(note);
+  if(v){ live.delete(note); if(sustain){ setTimeout(()=>v.stop(),650);} else v.stop(); }
+  keyEl(note)?.classList.remove('act');
+}
+function pluck(note,dur=.5,vel=.9,ins=curIns){   // fire & forget (autoplay)
+  const v=makeVoice(note,vel,ins);
+  const el=keyEl(note); if(el){el.classList.add('act'); setTimeout(()=>el.classList.remove('act'),Math.max(90,dur*700));}
+  setTimeout(()=>v.stop(),Math.max(80,dur*1000));
+  return v;
+}
+function panic(){
+  live.forEach(v=>v.stop(.04)); live.clear();
+  allVoices.forEach(v=>v.stop(.04));
+  document.querySelectorAll('.act').forEach(e=>e.classList.remove('act'));
+}
+window.addEventListener('blur',panic);
+document.addEventListener('visibilitychange',()=>{if(document.hidden)panic();});
+
+/* ================= KEYBOARD ================= */
+let octBase=3, OCTAVES=4;   // C3..C7-ish
+const keyMapRow=[
+  ['KeyZ',0],['KeyS',1],['KeyX',2],['KeyD',3],['KeyC',4],['KeyV',5],['KeyG',6],['KeyB',7],['KeyH',8],['KeyN',9],['KeyJ',10],['KeyM',11],
+  ['KeyQ',12],['Digit2',13],['KeyW',14],['Digit3',15],['KeyE',16],['KeyR',17],['Digit5',18],['KeyT',19],['Digit6',20],['KeyY',21],['Digit7',22],['KeyU',23],
+  ['KeyI',24],['Digit9',25],['KeyO',26],['Digit0',27],['KeyP',28],['BracketRight',29]
+];
+const kb=document.getElementById('kb');
+let keyEls={};
+function keyEl(n){return keyEls[n];}
+function buildKB(){
+  kb.innerHTML=''; keyEls={};
+  const holder=document.createElement('div'); holder.className='bkHolder';
+  const whites=[];
+  for(let o=0;o<OCTAVES;o++){
+    for(const w of ['C','D','E','F','G','A','B']) whites.push(w+(octBase+o));
+  }
+  whites.push('C'+(octBase+OCTAVES));
+  const showNames=document.getElementById('chkNames').checked;
+  whites.forEach(n=>{
+    const d=document.createElement('div'); d.className='wk'; d.dataset.note=n;
+    d.textContent=showNames?n:''; kb.appendChild(d); keyEls[n]=d;
+  });
+  kb.appendChild(holder);
+  // black keys positioned over whites
+  requestAnimationFrame(()=>{
+    const kbRect=kb.getBoundingClientRect();
+    const blackAfter={'C':'C#','D':'D#','F':'F#','G':'G#','A':'A#'};
+    whites.forEach(n=>{
+      const L=n.replace(/-?\d+$/,''), oc=n.match(/-?\d+$/)[0];
+      if(!blackAfter[L]) return;
+      const bn=blackAfter[L]+oc;
+      if(!whites.some(w=>w.match(/-?\d+$/)[0]===oc)) return;
+      const wEl=keyEls[n], r=wEl.getBoundingClientRect();
+      if(r.right-kbRect.left > kb.scrollWidth) return;
+      const b=document.createElement('div'); b.className='bk'; b.dataset.note=bn;
+      b.textContent=showNames?blackAfter[L]:'';
+      b.style.left=(r.left-kbRect.left + r.width - 15)+'px';
+      holder.appendChild(b); keyEls[bn]=b;
+    });
+    refreshHints();
+  });
+  document.getElementById('rangeLbl').textContent='C'+octBase+' – C'+(octBase+OCTAVES);
+}
+document.getElementById('chkNames').onchange=buildKB;
+document.getElementById('octUp').onclick=()=>{if(octBase<6){octBase++;panic();buildKB();}};
+document.getElementById('octDown').onclick=()=>{if(octBase>0){octBase--;panic();buildKB();}};
+document.getElementById('panic').onclick=panic;
+
+/* pointer handling */
+const pointers=new Map();
+function noteFromEvt(e){
+  const el=document.elementFromPoint(e.clientX,e.clientY);
+  return el&&el.dataset&&el.dataset.note?el.dataset.note:null;
+}
+kb.addEventListener('pointerdown',e=>{
+  const n=noteFromEvt(e); if(!n)return;
+  e.preventDefault(); kb.setPointerCapture?.(e.pointerId);
+  pointers.set(e.pointerId,n); noteOn(n,1); onUserNote(n);
+});
+kb.addEventListener('pointermove',e=>{
+  if(!pointers.has(e.pointerId))return;
+  const n=noteFromEvt(e), old=pointers.get(e.pointerId);
+  if(n&&n!==old){ noteOff(old); pointers.set(e.pointerId,n); noteOn(n,1); onUserNote(n); }
+});
+function relPtr(e){ const n=pointers.get(e.pointerId); if(n){noteOff(n);pointers.delete(e.pointerId);} }
+kb.addEventListener('pointerup',relPtr);
+kb.addEventListener('pointercancel',relPtr);
+kb.addEventListener('pointerleave',relPtr);
+window.addEventListener('pointerup',e=>relPtr(e));
+
+/* computer keyboard */
+const down=new Set();
+addEventListener('keydown',e=>{
+  if(e.repeat) return;
+  if(e.code==='Space'){e.preventDefault();sustain=true;document.getElementById('chkSus').checked=true;return;}
+  if(e.code==='ArrowRight'){document.getElementById('octUp').click();return;}
+  if(e.code==='ArrowLeft'){document.getElementById('octDown').click();return;}
+  const dm=/^Digit([1-8])$/.exec(e.code);
+  if(dm && curTab==='drum'){ hitPad(+dm[1]-1); return; }
+  const m=keyMapRow.find(k=>k[0]===e.code); if(!m) return;
+  const n=noteAt(m[1]); if(!n||!keyEls[n]) return;
+  down.add(e.code); noteOn(n,1); onUserNote(n);
+});
+addEventListener('keyup',e=>{
+  if(e.code==='Space'){sustain=false;document.getElementById('chkSus').checked=false;
+    if(!sustain) live.forEach((v,n)=>{});return;}
+  const m=keyMapRow.find(k=>k[0]===e.code); if(!m)return;
+  down.delete(e.code); const n=noteAt(m[1]); if(n) noteOff(n);
+});
+function noteAt(semi){
+  const idx=semi, o=octBase+Math.floor(idx/12);
+  return NOTES[idx%12]+o;
+}
+document.getElementById('chkSus').onchange=e=>{sustain=e.target.checked;if(!sustain)panicRelease();};
+function panicRelease(){ /* release notes not physically held */ }
+
+/* ================= SONGS ================= */
+// [note, beats]  ("r" = rest)  — beat = 0.5s at 100%
+const SONGS=[
+{id:'gf',name:'آبشار جاذبه (Gravity Falls)',info:'تم اصلی سریال',bpmScale:1,ins:'piano',notes:[
+ ['D4',.5],['E4',.5],['F4',.5],['A4',.5],['G4',.5],['F4',.5],['E4',1],
+ ['D4',.5],['E4',.5],['F4',.5],['A4',.5],['A#4',.5],['A4',.5],['G4',1],
+ ['F4',.5],['G4',.5],['A4',.5],['D5',.5],['C5',.5],['A4',.5],['G4',1],
+ ['A4',.5],['G4',.5],['F4',.5],['E4',.5],['D4',1.5],['r',.5],
+ ['A4',.5],['A#4',.5],['C5',.5],['D5',1],['C5',.5],['A#4',.5],['A4',1],
+ ['G4',.5],['A4',.5],['A#4',.5],['C5',1],['A#4',.5],['A4',.5],['G4',1],
+ ['F4',.5],['G4',.5],['A4',.5],['A#4',.5],['A4',.5],['G4',.5],['F4',.5],['E4',.5],
+ ['D4',2]
+]},
+{id:'elise',name:'برای الیز (Für Elise)',info:'بتهوون',ins:'piano',notes:[
+ ['E5',.5],['D#5',.5],['E5',.5],['D#5',.5],['E5',.5],['B4',.5],['D5',.5],['C5',.5],
+ ['A4',1],['C4',.5],['E4',.5],['A4',.5],['B4',1],['E4',.5],['G#4',.5],['B4',.5],
+ ['C5',1],['E4',.5],['E5',.5],['D#5',.5],['E5',.5],['D#5',.5],['E5',.5],['B4',.5],
+ ['D5',.5],['C5',.5],['A4',1],['C4',.5],['E4',.5],['A4',.5],['B4',1],['E4',.5],
+ ['C5',.5],['B4',.5],['A4',2]
+]},
+{id:'hp',name:'هری پاتر (Hedwig\'s Theme)',info:'جان ویلیامز',ins:'bell',notes:[
+ ['B4',.5],['E5',.75],['G5',.25],['F#5',.5],['E5',1],['B5',.5],['A5',1.5],
+ ['F#5',1.5],['E5',.75],['G5',.25],['F#5',.5],['D#5',1],['F5',.5],['B4',2],
+ ['B4',.5],['E5',.75],['G5',.25],['F#5',.5],['E5',1],['B5',.5],['D6',1],['C#6',.5],
+ ['C6',1],['G#5',.5],['C6',.75],['B5',.25],['A#5',.5],['F#5',1],['G5',.5],['E5',2]
+]},
+{id:'pirates',name:'دزدان دریایی کارائیب',info:'He\'s a Pirate',ins:'strings',notes:[
+ ['D4',.25],['D4',.25],['D4',.5],['D4',.25],['D4',.25],['D4',.25],['D4',.25],
+ ['E4',.5],['F4',.5],['F4',.25],['F4',.25],['G4',.25],['E4',.25],['E4',.5],
+ ['D4',.25],['C4',.25],['C4',.25],['D4',.5],['r',.25],
+ ['D4',.25],['D4',.25],['D4',.5],['D4',.25],['D4',.25],['D4',.25],['D4',.25],
+ ['E4',.5],['F4',.5],['F4',.25],['F4',.25],['G4',.25],['E4',.25],['E4',.5],
+ ['D4',.25],['C4',.25],['D4',1]
+]},
+{id:'tetris',name:'تتریس (Korobeiniki)',info:'کلاسیک بازی',ins:'synth',notes:[
+ ['E5',1],['B4',.5],['C5',.5],['D5',1],['C5',.5],['B4',.5],
+ ['A4',1],['A4',.5],['C5',.5],['E5',1],['D5',.5],['C5',.5],
+ ['B4',1.5],['C5',.5],['D5',1],['E5',1],
+ ['C5',1],['A4',1],['A4',1],['r',1],
+ ['D5',1.5],['F5',.5],['A5',1],['G5',.5],['F5',.5],
+ ['E5',1.5],['C5',.5],['E5',1],['D5',.5],['C5',.5],
+ ['B4',1],['B4',.5],['C5',.5],['D5',1],['E5',1],
+ ['C5',1],['A4',1],['A4',2]
+]},
+{id:'joy',name:'سرود شادی (Ode to Joy)',info:'بتهوون — آسان',ins:'piano',notes:[
+ ['E4',1],['E4',1],['F4',1],['G4',1],['G4',1],['F4',1],['E4',1],['D4',1],
+ ['C4',1],['C4',1],['D4',1],['E4',1],['E4',1.5],['D4',.5],['D4',2],
+ ['E4',1],['E4',1],['F4',1],['G4',1],['G4',1],['F4',1],['E4',1],['D4',1],
+ ['C4',1],['C4',1],['D4',1],['E4',1],['D4',1.5],['C4',.5],['C4',2]
+]},
+{id:'twinkle',name:'ستاره کوچولو (Twinkle)',info:'خیلی آسان',ins:'bell',notes:[
+ ['C4',1],['C4',1],['G4',1],['G4',1],['A4',1],['A4',1],['G4',2],
+ ['F4',1],['F4',1],['E4',1],['E4',1],['D4',1],['D4',1],['C4',2],
+ ['G4',1],['G4',1],['F4',1],['F4',1],['E4',1],['E4',1],['D4',2],
+ ['G4',1],['G4',1],['F4',1],['F4',1],['E4',1],['E4',1],['D4',2],
+ ['C4',1],['C4',1],['G4',1],['G4',1],['A4',1],['A4',1],['G4',2]
+]},
+{id:'birthday',name:'تولدت مبارک',info:'Happy Birthday',ins:'piano',notes:[
+ ['C4',.5],['C4',.5],['D4',1],['C4',1],['F4',1],['E4',2],
+ ['C4',.5],['C4',.5],['D4',1],['C4',1],['G4',1],['F4',2],
+ ['C4',.5],['C4',.5],['C5',1],['A4',1],['F4',1],['E4',1],['D4',2],
+ ['A#4',.5],['A#4',.5],['A4',1],['F4',1],['G4',1],['F4',2]
+]},
+{id:'river',name:'River Flows in You',info:'یی‌رو‌ما — ملودی',ins:'epiano',notes:[
+ ['A4',.5],['G#4',.5],['A4',.5],['G#4',.5],['A4',.5],['B4',.5],['C#5',.5],['E5',.5],
+ ['D5',.5],['C#5',.5],['B4',.5],['A4',.5],['B4',.5],['C#5',.5],['A4',1],
+ ['A4',.5],['G#4',.5],['A4',.5],['G#4',.5],['A4',.5],['B4',.5],['C#5',.5],['E5',.5],
+ ['D5',.5],['C#5',.5],['B4',.5],['C#5',.5],['A4',1.5],['r',.5],
+ ['E5',.5],['F#5',.5],['E5',.5],['C#5',.5],['B4',1],['C#5',.5],['B4',.5],['A4',2]
+]},
+{id:'canon',name:'کانن در ر (Canon in D)',info:'پاخلبل — ساده',ins:'strings',notes:[
+ ['F#5',1],['E5',1],['D5',1],['C#5',1],['B4',1],['A4',1],['B4',1],['C#5',1],
+ ['D5',1],['C#5',1],['B4',1],['A4',1],['G4',1],['F#4',1],['G4',1],['E4',1],
+ ['D4',1],['F#4',1],['A4',1],['G4',1],['F#4',1],['D4',1],['F#4',1],['E4',1],
+ ['D4',1],['B3',1],['D4',1],['A4',1],['G4',1],['B4',1],['A4',1],['G4',1],['F#4',2]
+]},
+{id:'jingle',name:'جینگل بلز',info:'کریسمس',ins:'bell',notes:[
+ ['E4',1],['E4',1],['E4',2],['E4',1],['E4',1],['E4',2],
+ ['E4',1],['G4',1],['C4',1],['D4',1],['E4',3],['r',1],
+ ['F4',1],['F4',1],['F4',1],['F4',1],['F4',1],['E4',1],['E4',1],['E4',.5],['E4',.5],
+ ['E4',1],['D4',1],['D4',1],['E4',1],['D4',2],['G4',2]
+]},
+{id:'lion',name:'شیرشاه (Circle of Life)',info:'دیزنی',ins:'strings',notes:[
+ ['A4',.5],['B4',.5],['C5',1],['B4',.5],['A4',.5],['G4',1],
+ ['A4',.5],['C5',.5],['E5',1],['D5',.5],['C5',.5],['B4',1.5],['r',.5],
+ ['C5',.5],['D5',.5],['E5',1],['D5',.5],['C5',.5],['A4',1],
+ ['G4',.5],['A4',.5],['C5',1],['A4',2]
+]},
+{id:'godfather',name:'پدرخوانده (The Godfather)',info:'تم عشق',ins:'guitar',notes:[
+ ['G4',.5],['C5',.75],['D#5',.25],['D5',.5],['C5',.5],['D#5',.5],['C5',.5],['D5',.5],['C5',.5],['G#4',.5],['G4',1.5],
+ ['G4',.5],['C5',.75],['D#5',.25],['D5',.5],['C5',.5],['D#5',.5],['C5',.5],['D#5',.5],['G5',.5],['F5',1.5],
+ ['A#4',.5],['D#5',.5],['D5',.5],['A#4',.5],['D5',.5],['A#4',.5],['C5',.5],['A#4',.5],['G4',1.5]
+]},
+{id:'titanic',name:'تایتانیک (My Heart Will Go On)',info:'سلین دیون',ins:'epiano',notes:[
+ ['E4',.5],['E4',.5],['E4',.5],['E4',.5],['D4',.5],['E4',1],['E4',.5],['D4',.5],['E4',1],['G4',.5],['F#4',1.5],
+ ['E4',.5],['E4',.5],['E4',.5],['E4',.5],['D4',.5],['E4',1],['E4',.5],['B4',2],
+ ['A4',.5],['B4',.5],['A4',.5],['G4',.5],['F#4',1],['E4',.5],['D4',.5],['E4',2]
+]},
+{id:'undertale',name:'Megalovania',info:'آندرتیل',ins:'synth',notes:[
+ ['D4',.25],['D4',.25],['D5',.5],['A4',.75],['G#4',.5],['G4',.5],['F4',.5],['D4',.25],['F4',.25],['G4',.25],
+ ['C4',.25],['C4',.25],['D5',.5],['A4',.75],['G#4',.5],['G4',.5],['F4',.5],['D4',.25],['F4',.25],['G4',.25],
+ ['B3',.25],['B3',.25],['D5',.5],['A4',.75],['G#4',.5],['G4',.5],['F4',.5],['D4',.25],['F4',.25],['G4',.25],
+ ['A#3',.25],['A#3',.25],['D5',.5],['A4',.75],['G#4',.5],['G4',.5],['F4',.5],['D4',.25],['F4',.25],['G4',.25]
+]},
+{id:'mario',name:'سوپر ماریو',info:'تم اصلی',ins:'synth',notes:[
+ ['E5',.25],['E5',.5],['E5',.5],['C5',.25],['E5',.5],['G5',1],['G4',1],
+ ['C5',.75],['G4',.5],['E4',.75],['A4',.5],['B4',.5],['A#4',.25],['A4',.5],
+ ['G4',.33],['E5',.33],['G5',.33],['A5',.5],['F5',.25],['G5',.5],['E5',.5],['C5',.25],['D5',.25],['B4',1]
+]},
+{id:'nokia',name:'زنگ نوکیا',info:'خاطره‌انگیز',ins:'organ',notes:[
+ ['E5',.25],['D5',.25],['F#4',.5],['G#4',.5],['C#5',.25],['B4',.25],['D4',.5],['E4',.5],
+ ['B4',.25],['A4',.25],['C#4',.5],['E4',.5],['A4',1.5]
+]},
+{id:'interstellar',name:'میان‌ستاره‌ای (Interstellar)',info:'هانس زیمر',ins:'organ',notes:[
+ ['A4',1],['A4',1],['E5',1],['E5',1],['A4',1],['A4',1],['E5',1],['E5',1],
+ ['F5',1],['F5',1],['E5',2],['D5',1],['D5',1],['C#5',2],
+ ['A4',1],['A4',1],['E5',1],['E5',1],['B4',1],['B4',1],['A4',2]
+]}
+];
+
+/* ============ song UI ============ */
+let cur=null, step=0, mode='idle', autoTimer=null, score=0;
+const $=id=>document.getElementById(id);
+const listEl=$('songList');
+SONGS.forEach((s,i)=>{
+  const d=document.createElement('div'); d.className='song'; d.dataset.i=i;
+  d.innerHTML='<b>'+s.name+'</b><small>'+s.info+' • '+s.notes.filter(n=>n[0]!=='r').length+' نت</small>';
+  d.onclick=()=>selectSong(i);
+  listEl.appendChild(d);
+});
+function selectSong(i){
+  stopAll();
+  cur=SONGS[i]; step=0; score=0;
+  [...listEl.children].forEach((c,j)=>c.classList.toggle('on',j===i));
+  $('curName').textContent=cur.name;
+  $('curTotal').textContent=cur.notes.filter(n=>n[0]!=='r').length;
+  $('curStep').textContent=0; $('score').textContent=0; $('prog').style.width='0%';
+  if(cur.ins){ curIns=cur.ins; $('insSel').value=cur.ins; $('insSel2').value=cur.ins; }
+  ensureRange();
+  $('msg').textContent='آهنگ انتخاب شد ✅ «حالت آموزش» را بزن یا «پخش خودکار».';
+  mode='idle'; refreshHints();
+}
+function playable(){ return cur? cur.notes.filter(n=>n[0]!=='r') : []; }
+function ensureRange(){ // shift octave so all notes fit
+  if(!cur) return;
+  const ocs=playable().map(n=>+n[0].match(/-?\d+$/)[0]);
+  const lo=Math.min(...ocs), hi=Math.max(...ocs);
+  let base=Math.min(lo, Math.max(0,hi-OCTAVES+1));
+  if(hi>base+OCTAVES) base=hi-OCTAVES;
+  base=Math.max(0,Math.min(6,base));
+  if(base!==octBase){ octBase=base; panic(); buildKB(); } else refreshHints();
+}
+function refreshHints(){
+  document.querySelectorAll('.hint,.next').forEach(e=>e.classList.remove('hint','next'));
+  if(mode!=='teach'||!cur) return;
+  const seq=playable();
+  const a=seq[step], b=seq[step+1];
+  if(a&&keyEls[a[0]]) keyEls[a[0]].classList.add('hint');
+  if(b&&keyEls[b[0]]&&b[0]!==a?.[0]) keyEls[b[0]].classList.add('next');
+}
+function onUserNote(n){
+  if(mode!=='teach'||!cur) return;
+  const seq=playable(), want=seq[step];
+  if(!want) return;
+  if(n===want[0]){
+    step++; score+=10;
+    $('curStep').textContent=step; $('score').textContent=score;
+    $('prog').style.width=(step/seq.length*100)+'%';
+    if(step>=seq.length){
+      mode='idle'; $('msg').textContent='🎉 آفرین! آهنگ کامل شد. امتیاز: '+score;
+      refreshHints(); celebrate();
+    } else { $('msg').textContent='عالی! نت بعدی: '+seq[step][0]; refreshHints(); }
+  } else {
+    score=Math.max(0,score-2); $('score').textContent=score;
+    $('msg').textContent='اشتباه بود 😅 نت درست: '+want[0];
+  }
+}
+function celebrate(){
+  ['C5','E5','G5','C6'].forEach((n,i)=>setTimeout(()=>pluck(n,.6,.8,'bell'),i*110));
+}
+$('btnTeach').onclick=()=>{
+  if(!cur) return $('msg').textContent='اول یک آهنگ انتخاب کن 🎵';
+  stopAuto(); ac(); mode='teach'; step=0; score=0;
+  $('curStep').textContent=0;$('score').textContent=0;$('prog').style.width='0%';
+  ensureRange(); refreshHints();
+  $('msg').textContent='کلید زرد را بزن! نت اول: '+playable()[0][0];
+};
+$('btnAuto').onclick=()=>{
+  if(!cur) return $('msg').textContent='اول یک آهنگ انتخاب کن 🎵';
+  stopAuto(); ac(); mode='auto'; ensureRange();
+  $('msg').textContent='▶️ در حال پخش…';
+  let i=0, pi=0;
+  const seq=cur.notes, total=playable().length;
+  const beat=()=>500*(100/ +$('tempo').value);
+  const tick=()=>{
+    if(mode!=='auto'||i>=seq.length){ if(mode==='auto'){mode='idle';$('msg').textContent='پخش تمام شد ✅';} return; }
+    const [n,d]=seq[i++];
+    const ms=d*beat();
+    if(n!=='r'){ pluck(n,Math.min(1.6,d*.9*(beat()/500)),.85,cur.ins||curIns); pi++;
+      $('curStep').textContent=pi; $('prog').style.width=(pi/total*100)+'%'; }
+    autoTimer=setTimeout(tick,ms);
+  };
+  tick();
+};
+function stopAuto(){ if(autoTimer){clearTimeout(autoTimer);autoTimer=null;} if(mode==='auto')mode='idle'; }
+function stopAll(){ stopAuto(); stopBeat(); stopRecPlay(); panic(); mode='idle'; refreshHints(); }
+$('btnStop').onclick=()=>{ stopAll(); $('msg').textContent='⏹ متوقف شد.'; };
+
+/* instrument selects */
+[$('insSel'),$('insSel2')].forEach(sel=>{
+  Object.entries(INSTRUMENTS).forEach(([k,v])=>{
+    const o=document.createElement('option'); o.value=k;o.textContent=v.name;sel.appendChild(o);
+  });
+  sel.value='piano';
+  sel.onchange=()=>{curIns=sel.value; $('insSel').value=sel.value; $('insSel2').value=sel.value; panic();};
+});
+$('vol').oninput=e=>{ac();master.gain.value=e.target.value/100;};
+$('tempo').oninput=e=>$('tempoV').textContent=e.target.value+'٪';
+
+/* ================= RECORD ================= */
+let recording=false, recNotes=[], recT0=0, recTimers=[];
+$('btnRec').onclick=()=>{
+  recording=!recording;
+  if(recording){recNotes=[];recT0=performance.now();$('btnRec').textContent='⏹ پایان ضبط';$('btnRec').classList.add('danger');}
+  else{$('btnRec').textContent='⏺ ضبط';$('btnRec').classList.remove('danger');}
+  $('recInfo').textContent=recNotes.length+' نت ضبط شده';
+};
+$('btnPlayRec').onclick=()=>{
+  stopRecPlay(); if(!recNotes.length)return;
+  ac();
+  recNotes.forEach(r=>recTimers.push(setTimeout(()=>pluck(r.note,.6,.85,r.ins),r.t)));
+};
+$('btnClrRec').onclick=()=>{recNotes=[];stopRecPlay();$('recInfo').textContent='۰ نت ضبط شده';};
+function stopRecPlay(){recTimers.forEach(clearTimeout);recTimers=[];}
+
+/* ================= DRUMS ================= */
+const PADS=[
+ {n:'کیک 🥁',t:'kick'},{n:'اسنر',t:'snare'},{n:'های‌هت',t:'hat'},{n:'های‌هت باز',t:'ohat'},
+ {n:'تام بم',t:'tomL'},{n:'تام زیر',t:'tomH'},{n:'کلپ 👏',t:'clap'},{n:'سیمبال',t:'crash'}
+];
+const padGrid=$('padGrid');
+PADS.forEach((p,i)=>{
+  const d=document.createElement('div');d.className='pad';d.innerHTML=p.n+'<br><small style="color:#93a2c6">'+(i+1)+'</small>';
+  d.onpointerdown=e=>{e.preventDefault();hitPad(i);};
+  padGrid.appendChild(d);
+});
+function hitPad(i){
+  const p=PADS[i]; if(!p)return; drum(p.t);
+  const el=padGrid.children[i]; if(el){el.classList.add('act');setTimeout(()=>el.classList.remove('act'),90);}
+}
+function noiseBuf(){
+  const C=ac(); if(noiseBuf._b)return noiseBuf._b;
+  const b=C.createBuffer(1,C.sampleRate*1,C.sampleRate), d=b.getChannelData(0);
+  for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
+  return noiseBuf._b=b;
+}
+function drum(type,vol=1){
+  const C=ac(), t=C.currentTime, g=C.createGain(); g.connect(master);
+  if(type==='kick'){
+    const o=C.createOscillator();o.type='sine';
+    o.frequency.setValueAtTime(150,t);o.frequency.exponentialRampToValueAtTime(45,t+.12);
+    g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.001,t+.38);
+    o.connect(g);o.start(t);o.stop(t+.42);
+  } else if(type==='tomL'||type==='tomH'){
+    const o=C.createOscillator();o.type='sine';const f=type==='tomL'?110:190;
+    o.frequency.setValueAtTime(f,t);o.frequency.exponentialRampToValueAtTime(f*.55,t+.25);
+    g.gain.setValueAtTime(vol*.8,t);g.gain.exponentialRampToValueAtTime(.001,t+.35);
+    o.connect(g);o.start(t);o.stop(t+.4);
+  } else {
+    const s=C.createBufferSource();s.buffer=noiseBuf();
+    const f=C.createBiquadFilter();
+    let dur=.12;
+    if(type==='snare'){f.type='bandpass';f.frequency.value=1900;f.Q.value=.8;dur=.18;}
+    if(type==='hat'){f.type='highpass';f.frequency.value=8000;dur=.05;}
+    if(type==='ohat'){f.type='highpass';f.frequency.value=7000;dur=.32;}
+    if(type==='clap'){f.type='bandpass';f.frequency.value=1200;f.Q.value=1.2;dur=.16;}
+    if(type==='crash'){f.type='highpass';f.frequency.value=5000;dur=1.1;}
+    g.gain.setValueAtTime(vol*.65,t);g.gain.exponentialRampToValueAtTime(.001,t+dur);
+    s.connect(f);f.connect(g);s.start(t);s.stop(t+dur+.05);
+    if(type==='snare'){const o=C.createOscillator();o.type='triangle';o.frequency.setValueAtTime(190,t);
+      const g2=C.createGain();g2.gain.setValueAtTime(vol*.35,t);g2.gain.exponentialRampToValueAtTime(.001,t+.12);
+      o.connect(g2);g2.connect(master);o.start(t);o.stop(t+.15);}
+  }
+  setTimeout(()=>{try{g.disconnect()}catch(e){}} ,1400);
+}
+const BEATS={
+  rock:[['kick','hat'],['hat'],['snare','hat'],['hat'],['kick','hat'],['kick','hat'],['snare','hat'],['hat']],
+  pop:[['kick','hat'],['hat'],['snare','hat'],['hat'],['hat'],['kick','hat'],['snare','hat'],['hat']],
+  hiphop:[['kick'],['hat'],['snare','hat'],['hat'],['kick','hat'],['kick'],['snare','hat'],['hat']],
+  waltz:[['kick'],['hat'],['hat'],['snare'],['hat'],['hat']]
+};
+let beatTimer=null,beatI=0;
+$('bpm').oninput=e=>$('bpmV').textContent=e.target.value;
+$('btnBeat').onclick=()=>{ beatTimer?stopBeat():startBeat(); };
+function startBeat(){
+  ac(); beatI=0; $('btnBeat').textContent='⏹ توقف ریتم';
+  const loop=()=>{
+    const pat=BEATS[$('beatSel').value];
+    pat[beatI%pat.length].forEach(x=>drum(x,x==='hat'?.5:1));
+    beatI++;
+    beatTimer=setTimeout(loop, 30000/ +$('bpm').value);
+  };
+  loop();
+}
+function stopBeat(){ if(beatTimer)clearTimeout(beatTimer); beatTimer=null; $('btnBeat').textContent='▶️ شروع ریتم'; }
+
+/* ================= TABS ================= */
+let curTab='learn';
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); curTab=b.dataset.tab;
+  document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('on',p.id==='p-'+curTab));
+  if(curTab!=='learn'){ mode='idle'; stopAuto(); refreshHints(); }
+});
+addEventListener('resize',()=>{clearTimeout(window._rz);window._rz=setTimeout(buildKB,150);});
+document.addEventListener('pointerdown',()=>ac(),{once:true});
+buildKB();
+(function(){
+  const want=new URLSearchParams(location.search).get('song');
+  let i=want?SONGS.findIndex(s=>s.id===want):0;
+  if(i<0)i=0;
+  selectSong(i);
+  const el=listEl.children[i]; if(el) el.scrollIntoView({block:'nearest'});
+  if(want){ setTimeout(()=>{ $('btnTeach').click(); },200); }
+})();
+</script>
+</body>
+</html>
