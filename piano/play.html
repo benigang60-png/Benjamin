@@ -119,6 +119,7 @@
   <a href="index.html">خانه</a>
   <a href="songs.html">آهنگ‌ها</a>
   <a href="learn.html">آموزش</a>
+  <a href="progress.html">پیشرفت من</a>
   <a class="on" href="play.html">نواختن</a>
 </div></nav>
 <header>
@@ -138,6 +139,11 @@
       <div class="row" style="margin-bottom:10px">
         <b style="font-size:14px">🎵 آهنگ‌ها</b>
         <span class="lbl">یک آهنگ را انتخاب کن، کلیدهای زرد را به ترتیب بزن.</span>
+      </div>
+      <div class="row" style="margin-bottom:10px">
+        <span class="badge">پیشرفت کلی: <b id="progAll">0 / 0</b></span>
+        <div class="bar"><i id="progAllBar"></i></div>
+        <button class="btn" id="btnResetProg" style="padding:6px 12px;font-size:12px">پاک کردن پیشرفت</button>
       </div>
       <div class="songs" id="songList"></div>
     </div>
@@ -535,6 +541,55 @@ const SONGS=[
  ['A4',1],['A4',1],['E5',1],['E5',1],['A4',1],['A4',1],['E5',1],['E5',1],
  ['F5',1],['F5',1],['E5',2],['D5',1],['D5',1],['C#5',2],
  ['A4',1],['A4',1],['E5',1],['E5',1],['B4',1],['B4',1],['A4',2]
+]},
+{id:'zelda',name:'زلدا (Zelda\'s Lullaby)',info:'نینتندو',ins:'bell',notes:[
+ ['E4',1.5],['G4',.5],['D4',2],['C4',1],['D4',.5],['E4',.5],['G4',1],['A4',1],
+ ['E4',1.5],['G4',.5],['D4',2],['C4',1],['G4',1],['E4',2],
+ ['B4',1.5],['D5',.5],['A4',2],['G4',1],['A4',.5],['B4',.5],['D5',1],['E5',1],
+ ['B4',1.5],['D5',.5],['A4',2],['G4',1],['D4',1],['E4',2]
+]},
+{id:'moonlight',name:'سونات مهتاب',info:'بتهوون — آرپژ',ins:'epiano',notes:[
+ ['C#4',.5],['E4',.5],['G#4',.5],['C#4',.5],['E4',.5],['G#4',.5],
+ ['C#4',.5],['E4',.5],['G#4',.5],['C#4',.5],['E4',.5],['G#4',.5],
+ ['C#4',.5],['E4',.5],['A4',.5],['C#4',.5],['E4',.5],['A4',.5],
+ ['C#4',.5],['D4',.5],['F#4',.5],['C#4',.5],['D4',.5],['F#4',.5],
+ ['B3',.5],['D4',.5],['G#4',.5],['B3',.5],['C#4',.5],['E4',.5],
+ ['C#4',.5],['E4',.5],['G#4',.5],['C#4',2]
+]},
+{id:'imperial',name:'مارش امپراتوری',info:'Star Wars — دارث ویدر',ins:'bass',notes:[
+ ['G4',1],['G4',1],['G4',1],['D#4',.75],['A#4',.25],['G4',1],['D#4',.75],['A#4',.25],['G4',2],
+ ['D5',1],['D5',1],['D5',1],['D#5',.75],['A#4',.25],['F#4',1],['D#4',.75],['A#4',.25],['G4',2],
+ ['G5',1],['G4',.75],['G4',.25],['G5',1],['F#5',.75],['F5',.25],['E5',.25],['D#5',.25],['E5',.5],
+ ['r',.5],['G#4',.5],['C#5',1],['C5',.75],['B4',.25],['A#4',.25],['A4',.25],['A#4',.5]
+]},
+{id:'aval',name:'روزهای خوب (Amelie)',info:'Comptine d\'un autre été',ins:'epiano',notes:[
+ ['F#4',.5],['C#4',.5],['F#4',.5],['G#4',.5],['A4',.5],['C#5',.5],['B4',.5],['G#4',.5],
+ ['A4',.5],['C#5',.5],['E5',.5],['C#5',.5],['B4',.5],['G#4',.5],['F#4',1],
+ ['F#4',.5],['C#4',.5],['F#4',.5],['G#4',.5],['A4',.5],['E5',.5],['C#5',.5],['B4',.5],
+ ['A4',.5],['F#4',.5],['G#4',.5],['A4',.5],['F#4',2]
+]},
+{id:'ff7',name:'Final Fantasy VII',info:'تم اصلی',ins:'strings',notes:[
+ ['E4',1],['G4',1],['A4',1.5],['B4',.5],['A4',1],['G4',1],['E4',2],
+ ['D4',1],['E4',1],['G4',1.5],['A4',.5],['G4',1],['E4',1],['D4',2],
+ ['E4',1],['G4',1],['A4',1.5],['C5',.5],['B4',1],['A4',1],['G4',2],
+ ['A4',1],['B4',1],['C5',1.5],['B4',.5],['A4',1],['G4',1],['E4',2]
+]},
+{id:'sadness',name:'حس تنهایی (Sadness and Sorrow)',info:'ناروتو',ins:'strings',notes:[
+ ['B4',1],['A4',.5],['B4',.5],['E5',1],['D5',1],['B4',1],['A4',1],['B4',2],
+ ['E4',1],['F#4',.5],['G4',.5],['A4',1],['B4',1],['A4',.5],['G4',.5],['F#4',1],['E4',2],
+ ['B4',1],['C5',.5],['D5',.5],['E5',1],['D5',1],['B4',1],['A4',1],['G4',1],['F#4',1],['E4',2]
+]},
+{id:'fly',name:'Fly Me to the Moon',info:'جاز کلاسیک',ins:'guitar',notes:[
+ ['A5',.5],['G5',.5],['F5',.5],['E5',.5],['D5',.5],['C5',.5],['D5',.5],['E5',.5],
+ ['A4',1],['r',.5],['G5',.5],['F5',.5],['E5',.5],['D5',.5],['C5',.5],['B4',.5],['C5',.5],
+ ['D5',1],['r',.5],['F5',.5],['E5',.5],['D5',.5],['C5',.5],['B4',.5],['A4',.5],['B4',.5],
+ ['C5',1],['E5',1],['A4',2]
+]},
+{id:'ode2',name:'گل یاس (Greensleeves)',info:'فولک انگلیسی',ins:'organ',notes:[
+ ['A4',.5],['C5',1],['D5',.5],['E5',.75],['F5',.25],['E5',.5],['D5',1],['B4',.5],
+ ['G4',.75],['A4',.25],['B4',.5],['C5',1],['A4',.5],['A4',.75],['G#4',.25],['A4',.5],['B4',1],
+ ['A4',.5],['C5',1],['D5',.5],['E5',.75],['F5',.25],['E5',.5],['D5',1],['B4',.5],
+ ['G4',.75],['A4',.25],['B4',.5],['C5',.75],['B4',.25],['A4',.5],['G#4',.75],['F#4',.25],['G#4',.5],['A4',2]
 ]}
 ];
 
@@ -545,6 +600,7 @@ const listEl=$('songList');
 SONGS.forEach((s,i)=>{
   const d=document.createElement('div'); d.className='song'; d.dataset.i=i;
   d.innerHTML='<b>'+s.name+'</b><small>'+s.info+' • '+s.notes.filter(n=>n[0]!=='r').length+' نت</small>';
+  d.style.display='flex'; d.style.flexDirection='column'; d.style.gap='2px';
   d.onclick=()=>selectSong(i);
   listEl.appendChild(d);
 });
@@ -588,7 +644,7 @@ function onUserNote(n){
     $('prog').style.width=(step/seq.length*100)+'%';
     if(step>=seq.length){
       mode='idle'; $('msg').textContent='🎉 آفرین! آهنگ کامل شد. امتیاز: '+score;
-      refreshHints(); celebrate();
+      refreshHints(); celebrate(); recordDone(cur.id,score,seq.length);
     } else { $('msg').textContent='عالی! نت بعدی: '+seq[step][0]; refreshHints(); }
   } else {
     score=Math.max(0,score-2); $('score').textContent=score;
@@ -597,6 +653,31 @@ function onUserNote(n){
 }
 function celebrate(){
   ['C5','E5','G5','C6'].forEach((n,i)=>setTimeout(()=>pluck(n,.6,.8,'bell'),i*110));
+}
+
+/* ---- progress saving ---- */
+const PKEY='pianoStudioProgress';
+function loadProg(){ try{return JSON.parse(localStorage.getItem(PKEY))||{}}catch(e){return {}} }
+function saveProg(p){ try{localStorage.setItem(PKEY,JSON.stringify(p))}catch(e){} }
+function recordDone(songId,sc,total){
+  const p=loadProg(), acc=Math.round(sc/(total*10)*100);
+  const old=p[songId]||{plays:0,best:0};
+  p[songId]={plays:old.plays+1,best:Math.max(old.best,acc),last:Date.now()};
+  saveProg(p); paintProgress();
+}
+function paintProgress(){
+  const p=loadProg();
+  [...listEl.children].forEach(el=>{
+    const s=SONGS[+el.dataset.i], r=p[s.id];
+    let m=el.querySelector('.done');
+    if(r){ if(!m){m=document.createElement('small');m.className='done';el.appendChild(m);}
+      m.style.color='#38d39f';
+      m.textContent='✅ بهترین: '+r.best+'٪ • '+r.plays+' بار';
+    } else if(m) m.remove();
+  });
+  const done=SONGS.filter(s=>p[s.id]).length;
+  const el=$('progAll'); if(el){ el.textContent=done+' / '+SONGS.length;
+    $('progAllBar').style.width=(done/SONGS.length*100)+'%'; }
 }
 $('btnTeach').onclick=()=>{
   if(!cur) return $('msg').textContent='اول یک آهنگ انتخاب کن 🎵';
@@ -734,7 +815,8 @@ document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{
 });
 addEventListener('resize',()=>{clearTimeout(window._rz);window._rz=setTimeout(buildKB,150);});
 document.addEventListener('pointerdown',()=>ac(),{once:true});
-buildKB();
+$('btnResetProg').onclick=()=>{ if(confirm('همه پیشرفت پاک شود؟')){localStorage.removeItem(PKEY);paintProgress();} };
+buildKB(); paintProgress();
 (function(){
   const want=new URLSearchParams(location.search).get('song');
   let i=want?SONGS.findIndex(s=>s.id===want):0;

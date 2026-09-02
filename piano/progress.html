@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>پیشرفت من — پیانو استودیو</title>
+<link rel="stylesheet" href="site.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎹</text></svg>">
+<style>
+  .bigbar{height:14px;background:#0f1729;border:1px solid var(--line);border-radius:99px;overflow:hidden;max-width:520px;margin:14px auto}
+  .bigbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#38d39f,#4ea8ff);transition:width .6s}
+  .medal{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;text-align:center;opacity:.35;transition:.2s}
+  .medal.got{opacity:1;border-color:var(--acc);box-shadow:0 0 0 1px var(--acc) inset}
+  .medal .e{font-size:34px;display:block;margin-bottom:8px}
+  .medal b{font-size:14px;display:block;margin-bottom:4px}
+  .medal small{color:var(--mut);font-size:12px}
+  .doneTag{font-size:11px;color:var(--ok)}
+</style>
+</head>
+<body>
+<nav class="nav"><div class="container">
+  <a class="brand" href="index.html">🎹 پیانو <em>استودیو</em></a>
+  <button class="burger" onclick="document.getElementById('m').classList.toggle('open')">☰</button>
+  <ul id="m">
+    <li><a class="lnk" href="index.html">خانه</a></li>
+    <li><a class="lnk" href="songs.html">آهنگ‌ها</a></li>
+    <li><a class="lnk" href="learn.html">آموزش</a></li>
+    <li><a class="lnk on" href="progress.html">پیشرفت من</a></li>
+    <li><a class="lnk" href="play.html">نواختن</a></li>
+  </ul>
+  <a class="navCta" href="play.html">▶ شروع نواختن</a>
+</div></nav>
+
+<section class="blk" style="border:none;padding-top:44px"><div class="container">
+  <h2 class="st">پیشرفت من</h2>
+  <p class="sub">هر آهنگی که در حالت آموزش تمام کنی اینجا ثبت می‌شود (روی همین مرورگر ذخیره می‌شود).</p>
+  <div class="bigbar"><i id="bar"></i></div>
+  <div class="stats" style="margin-top:26px">
+    <div class="stat"><b id="sDone">۰</b><span>آهنگ تمام‌شده</span></div>
+    <div class="stat"><b id="sPlays">۰</b><span>مجموع تمرین‌ها</span></div>
+    <div class="stat"><b id="sAvg">۰٪</b><span>میانگین دقت</span></div>
+    <div class="stat"><b id="sPerf">۰</b><span>اجرای بی‌نقص</span></div>
+  </div>
+</div></section>
+
+<section class="blk"><div class="container">
+  <h2 class="st">نشان‌ها</h2>
+  <p class="sub">با تمرین بیشتر بازشان کن.</p>
+  <div class="grid g4" id="medals"></div>
+</div></section>
+
+<section class="blk"><div class="container">
+  <h2 class="st">وضعیت آهنگ‌ها</h2>
+  <p class="sub">آهنگ‌های ناتمام را ادامه بده.</p>
+  <div class="grid g4" id="list"></div>
+  <div class="btnRow" style="margin-top:28px">
+    <a class="btn gold" href="play.html">ادامه‌ی تمرین 🎹</a>
+    <button class="btn" id="reset">🗑 پاک کردن پیشرفت</button>
+  </div>
+</div></section>
+
+<footer><div class="container">
+  <a href="index.html">خانه</a> · <a href="songs.html">آهنگ‌ها</a> · <a href="learn.html">آموزش</a> · <a href="play.html">نواختن</a>
+</div></footer>
+
+<script src="catalog.js"></script>
+<script>
+const PKEY='pianoStudioProgress';
+const fa=n=>String(n).replace(/\d/g,d=>'۰۱۲۳۴۵۶۷۸۹'[d]);
+function load(){ try{return JSON.parse(localStorage.getItem(PKEY))||{}}catch(e){return {}} }
+function render(){
+  const p=load();
+  const rows=CATALOG.map(s=>({s,r:p[s.id]}));
+  const done=rows.filter(x=>x.r);
+  const plays=done.reduce((a,x)=>a+(x.r.plays||0),0);
+  const avg=done.length?Math.round(done.reduce((a,x)=>a+(x.r.best||0),0)/done.length):0;
+  const perf=done.filter(x=>x.r.best>=100).length;
+
+  document.getElementById('bar').style.width=(done.length/CATALOG.length*100)+'%';
+  document.getElementById('sDone').textContent=fa(done.length);
+  document.getElementById('sPlays').textContent=fa(plays);
+  document.getElementById('sAvg').textContent=fa(avg)+'٪';
+  document.getElementById('sPerf').textContent=fa(perf);
+
+  const MED=[
+    {e:'🌱',n:'اولین قدم',d:'یک آهنگ را تمام کن',ok:done.length>=1},
+    {e:'🎵',n:'نوازنده',d:'۳ آهنگ را تمام کن',ok:done.length>=3},
+    {e:'🎼',n:'حرفه‌ای',d:'۱۰ آهنگ را تمام کن',ok:done.length>=10},
+    {e:'👑',n:'استاد',d:'همه آهنگ‌ها را تمام کن',ok:done.length>=CATALOG.length},
+    {e:'💎',n:'بی‌نقص',d:'یک آهنگ با دقت ۱۰۰٪',ok:perf>=1},
+    {e:'🔥',n:'سخت‌کوش',d:'۲۰ بار تمرین',ok:plays>=20},
+    {e:'🎯',n:'دقیق',d:'میانگین دقت بالای ۹۰٪',ok:avg>=90&&done.length>=3},
+    {e:'⚔️',n:'شکارچی چالش',d:'یک آهنگ سخت را تمام کن',ok:done.some(x=>x.s.dif==='h')}
+  ];
+  document.getElementById('medals').innerHTML=MED.map(m=>
+    `<div class="medal${m.ok?' got':''}"><span class="e">${m.e}</span><b>${m.n}</b><small>${m.d}</small></div>`).join('');
+
+  document.getElementById('list').innerHTML=rows.map(({s,r})=>`
+    <a class="songCard" href="play.html?song=${s.id}">
+      <b>${s.ico} ${s.name}</b><small>${s.info}</small>
+      <div class="tagRow"><span class="tag ${s.dif}">${DIFN[s.dif]}</span>
+      ${r?`<span class="tag" style="color:#38d39f;border-color:#1e5c46">✅ ${fa(r.best)}٪ • ${fa(r.plays)} بار</span>`
+         :'<span class="tag">هنوز تمام نشده</span>'}</div>
+    </a>`).join('');
+}
+document.getElementById('reset').onclick=()=>{ if(confirm('همه پیشرفت پاک شود؟')){localStorage.removeItem(PKEY);render();} };
+render();
+</script>
+</body>
+</html>

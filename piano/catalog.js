@@ -17,6 +17,14 @@ window.CATALOG=[
  {id:'undertale', name:'Megalovania',            info:'Undertale',                 cat:'بازی',   dif:'h', ico:'💀'},
  {id:'mario',     name:'سوپر ماریو',             info:'Super Mario Bros',          cat:'بازی',   dif:'m', ico:'🍄'},
  {id:'nokia',     name:'زنگ نوکیا',              info:'Nokia Tune',                cat:'مدرن',   dif:'e', ico:'📱'},
- {id:'interstellar',name:'میان‌ستاره‌ای',        info:'Interstellar — هانس زیمر',  cat:'فیلم',   dif:'m', ico:'🚀'}
+ {id:'interstellar',name:'میان‌ستاره‌ای',        info:'Interstellar — هانس زیمر',  cat:'فیلم',   dif:'m', ico:'🚀'},
+ {id:'zelda',     name:'لالایی زلدا',            info:"Zelda's Lullaby — نینتندو", cat:'بازی',   dif:'m', ico:'🗡️'},
+ {id:'moonlight', name:'سونات مهتاب',            info:'بتهوون — آرپژ',             cat:'کلاسیک', dif:'h', ico:'🌙'},
+ {id:'imperial',  name:'مارش امپراتوری',         info:'Star Wars — دارث ویدر',     cat:'فیلم',   dif:'h', ico:'🌑'},
+ {id:'aval',      name:'آملی',                   info:"Comptine d'un autre été",   cat:'مدرن',   dif:'h', ico:'☕'},
+ {id:'ff7',       name:'Final Fantasy VII',      info:'تم اصلی',                   cat:'بازی',   dif:'m', ico:'⚔️'},
+ {id:'sadness',   name:'حس تنهایی',              info:'ناروتو — Sadness & Sorrow', cat:'کارتون', dif:'m', ico:'🍥'},
+ {id:'fly',       name:'Fly Me to the Moon',     info:'جاز کلاسیک',                cat:'مدرن',   dif:'m', ico:'🌕'},
+ {id:'ode2',      name:'گل یاس (Greensleeves)',  info:'فولک انگلیسی',              cat:'کلاسیک', dif:'m', ico:'🌿'}
 ];
 window.DIFN={e:'آسان',m:'متوسط',h:'سخت'};
