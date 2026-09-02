@@ -34,7 +34,7 @@
 <section class="blk" style="border:none;padding-top:44px"><div class="container">
   <h2 class="st">پیشرفت من</h2>
   <p class="sub">هر آهنگی که در حالت آموزش تمام کنی اینجا ثبت می‌شود (روی همین مرورگر ذخیره می‌شود).</p>
-  <div class="bigbar"><i id="bar"></i></div>
+  <div class="bigbar"><i id="progBar"></i></div>
   <div class="stats" style="margin-top:26px">
     <div class="stat"><b id="sDone">۰</b><span>آهنگ تمام‌شده</span></div>
     <div class="stat"><b id="sPlays">۰</b><span>مجموع تمرین‌ها</span></div>
@@ -52,10 +52,10 @@
 <section class="blk"><div class="container">
   <h2 class="st">وضعیت آهنگ‌ها</h2>
   <p class="sub">آهنگ‌های ناتمام را ادامه بده.</p>
-  <div class="grid g4" id="list"></div>
+  <div class="grid g4" id="progList"></div>
   <div class="btnRow" style="margin-top:28px">
     <a class="btn gold" href="play.html">ادامه‌ی تمرین 🎹</a>
-    <button class="btn" id="reset">🗑 پاک کردن پیشرفت</button>
+    <button class="btn" id="progReset">🗑 پاک کردن پیشرفت</button>
   </div>
 </div></section>
 
@@ -76,7 +76,7 @@ function render(){
   const avg=done.length?Math.round(done.reduce((a,x)=>a+(x.r.best||0),0)/done.length):0;
   const perf=done.filter(x=>x.r.best>=100).length;
 
-  document.getElementById('bar').style.width=(done.length/CATALOG.length*100)+'%';
+  document.getElementById('progBar').style.width=(done.length/CATALOG.length*100)+'%';
   document.getElementById('sDone').textContent=fa(done.length);
   document.getElementById('sPlays').textContent=fa(plays);
   document.getElementById('sAvg').textContent=fa(avg)+'٪';
@@ -95,7 +95,7 @@ function render(){
   document.getElementById('medals').innerHTML=MED.map(m=>
     `<div class="medal${m.ok?' got':''}"><span class="e">${m.e}</span><b>${m.n}</b><small>${m.d}</small></div>`).join('');
 
-  document.getElementById('list').innerHTML=rows.map(({s,r})=>`
+  document.getElementById('progList').innerHTML=rows.map(({s,r})=>`
     <a class="songCard" href="play.html?song=${s.id}">
       <b>${s.ico} ${s.name}</b><small>${s.info}</small>
       <div class="tagRow"><span class="tag ${s.dif}">${DIFN[s.dif]}</span>
@@ -103,7 +103,7 @@ function render(){
          :'<span class="tag">هنوز تمام نشده</span>'}</div>
     </a>`).join('');
 }
-document.getElementById('reset').onclick=()=>{ if(confirm('همه پیشرفت پاک شود؟')){localStorage.removeItem(PKEY);render();} };
+document.getElementById('progReset').onclick=()=>{ if(confirm('همه پیشرفت پاک شود؟')){localStorage.removeItem(PKEY);render();} };
 render();
 </script>
 </body>

@@ -1,10 +1,119 @@
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-<title>نواختن — پیانو استودیو</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎹 پیانو استودیو — نسخه کامل آفلاین</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎹</text></svg>">
+<style>:root{
+  --bg:#0b0f1a; --card:#161f38; --line:#243254;
+  --txt:#e8edf9; --mut:#93a2c6; --acc:#ffd23f; --acc2:#4ea8ff; --ok:#38d39f;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{scroll-behavior:smooth}
+body{
+  margin:0;min-height:100vh;color:var(--txt);
+  font-family:"Vazirmatn",Tahoma,system-ui,sans-serif;
+  background:radial-gradient(1200px 700px at 50% -10%,#1d2a4d 0%,var(--bg) 60%);
+}
+a{color:inherit;text-decoration:none}
+.container{max-width:1100px;margin:0 auto;padding:0 18px}
+
+/* ---- nav ---- */
+.nav{
+  position:sticky;top:0;z-index:50;border-bottom:1px solid var(--line);
+  background:rgba(10,14,25,.82);backdrop-filter:blur(10px);
+}
+.nav .container{display:flex;align-items:center;gap:14px;height:62px}
+.brand{font-weight:800;font-size:19px;letter-spacing:.3px;display:flex;align-items:center;gap:8px}
+.brand em{font-style:normal;color:var(--acc)}
+.nav ul{display:flex;gap:4px;list-style:none;margin:0 auto 0 0;padding:0;flex-wrap:wrap}
+.nav a.lnk{padding:8px 14px;border-radius:999px;color:var(--mut);font-size:14px;transition:.15s;display:block}
+.nav a.lnk:hover{color:var(--txt);background:#1b2542}
+.nav a.lnk.on{background:linear-gradient(180deg,#ffd23f,#f0a91c);color:#231b00;font-weight:700}
+.navCta{background:linear-gradient(180deg,#4ea8ff,#2b7fd6);color:#04121f!important;font-weight:700;
+  padding:9px 18px;border-radius:999px;font-size:14px;white-space:nowrap}
+.burger{display:none;background:none;border:1px solid var(--line);color:var(--txt);border-radius:10px;
+  padding:6px 11px;font-size:18px;cursor:pointer}
+@media(max-width:820px){
+  .burger{display:block;margin-inline-start:auto}
+  .nav ul{position:absolute;top:62px;inset-inline:0;flex-direction:column;background:#101728;
+    border-bottom:1px solid var(--line);padding:10px 18px;display:none;margin:0}
+  .nav ul.open{display:flex}
+  .navCta{display:none}
+}
+
+/* ---- hero ---- */
+.hero{padding:70px 0 50px;text-align:center;position:relative;overflow:hidden}
+.hero h1{font-size:clamp(28px,5.5vw,52px);margin:0 0 14px;line-height:1.3}
+.hero h1 em{font-style:normal;background:linear-gradient(90deg,#ffd23f,#ff9f43);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p{color:var(--mut);font-size:clamp(14px,2.2vw,18px);max-width:640px;margin:0 auto 28px;line-height:2}
+.btnRow{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.btn{display:inline-block;padding:13px 26px;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;
+  border:1px solid var(--line);background:#1a2440;color:var(--txt);transition:.15s;font-family:inherit}
+.btn:hover{transform:translateY(-2px);border-color:var(--acc2)}
+.btn.gold{background:linear-gradient(180deg,#ffd23f,#eaa50f);border-color:#ffd23f;color:#231b00}
+.btn.blue{background:linear-gradient(180deg,#4ea8ff,#2b7fd6);border-color:#4ea8ff;color:#04121f}
+
+.miniKeys{display:flex;justify-content:center;margin-top:44px;height:96px;filter:drop-shadow(0 12px 24px rgba(0,0,0,.5))}
+.miniKeys i{display:block;width:34px;height:96px;background:linear-gradient(180deg,#fff,#d8dded);
+  border:1px solid #9aa5bd;border-radius:0 0 7px 7px;margin:0 1.5px;position:relative;animation:kdip 3s ease-in-out infinite}
+.miniKeys i:nth-child(2n){animation-delay:.35s}
+.miniKeys i:nth-child(3n){animation-delay:.7s}
+.miniKeys i.b{width:22px;height:60px;background:linear-gradient(180deg,#3a4460,#0a0e18);margin:0 -12px;z-index:2;border-color:#000}
+@keyframes kdip{0%,88%,100%{transform:translateY(0)}92%{transform:translateY(5px)}}
+
+/* ---- sections ---- */
+section.blk{padding:56px 0;border-top:1px solid var(--line)}
+h2.st{font-size:clamp(21px,3.4vw,30px);margin:0 0 8px;text-align:center}
+p.sub{color:var(--mut);text-align:center;margin:0 0 32px;font-size:14px}
+.grid{display:grid;gap:14px}
+.g3{grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}
+.g4{grid-template-columns:repeat(auto-fill,minmax(215px,1fr))}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px;transition:.18s}
+.card:hover{border-color:#38507f;transform:translateY(-3px)}
+.card .ico{font-size:30px;margin-bottom:10px}
+.card h3{margin:0 0 8px;font-size:17px}
+.card p{margin:0;color:var(--mut);font-size:13.5px;line-height:2}
+
+.songCard{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;
+  display:flex;flex-direction:column;gap:6px;transition:.18s;cursor:pointer}
+.songCard:hover{border-color:var(--acc);transform:translateY(-3px);box-shadow:0 10px 26px rgba(0,0,0,.35)}
+.songCard b{font-size:15px}
+.songCard small{color:var(--mut);font-size:12px}
+.tagRow{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+.tag{font-size:11px;padding:3px 9px;border-radius:99px;background:#0f1729;border:1px solid var(--line);color:var(--mut)}
+.tag.e{color:var(--ok);border-color:#1e5c46}
+.tag.m{color:var(--acc);border-color:#6b5510}
+.tag.h{color:#ff8b8b;border-color:#6d2a2a}
+
+.steps{counter-reset:s}
+.step{display:flex;gap:16px;align-items:flex-start;padding:18px 0;border-bottom:1px dashed var(--line)}
+.step:last-child{border:none}
+.step .n{flex:0 0 40px;height:40px;border-radius:12px;display:grid;place-items:center;font-weight:800;
+  background:linear-gradient(180deg,#ffd23f,#eaa50f);color:#231b00}
+.step h4{margin:0 0 5px;font-size:16px}
+.step p{margin:0;color:var(--mut);font-size:13.5px;line-height:2}
+
+kbd{background:#0f1729;border:1px solid var(--line);border-bottom-width:3px;border-radius:6px;
+  padding:2px 8px;font-family:monospace;font-size:12px;color:var(--acc)}
+
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;text-align:center}
+.stat b{display:block;font-size:30px;color:var(--acc)}
+.stat span{color:var(--mut);font-size:13px}
+
+footer{border-top:1px solid var(--line);padding:28px 0;text-align:center;color:var(--mut);font-size:13px}
+footer a{color:var(--acc2)}
+
+.searchBox{width:100%;max-width:420px;margin:0 auto 22px;display:block;background:#0f1729;color:var(--txt);
+  border:1px solid var(--line);border-radius:12px;padding:12px 16px;font-family:inherit;font-size:14px}
+.searchBox:focus{outline:none;border-color:var(--acc2)}
+.filters{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:22px}
+.filters button{background:#0f1729;border:1px solid var(--line);color:var(--mut);padding:7px 15px;
+  border-radius:99px;cursor:pointer;font-family:inherit;font-size:13px;transition:.15s}
+.filters button:hover{color:var(--txt)}
+.filters button.on{background:var(--acc);color:#231b00;border-color:var(--acc);font-weight:700}
+</style>
 <style>
   .sitenav{position:sticky;top:0;z-index:60;border-bottom:1px solid #243254;background:rgba(10,14,25,.9);backdrop-filter:blur(10px)}
   .sitenav .in{max-width:1100px;margin:0 auto;padding:0 16px;height:54px;display:flex;align-items:center;gap:10px}
@@ -14,8 +123,7 @@
   .sitenav a.br em{font-style:normal;color:#ffd23f}
   .sitenav a.on{background:linear-gradient(180deg,#ffd23f,#f0a91c);color:#231b00;font-weight:700}
   .sitenav .sp{margin-inline-start:auto}
-</style>
-<style>
+
   :root{
     --bg:#0b0f1a; --bg2:#121a2e; --card:#161f38; --line:#243254;
     --txt:#e8edf9; --mut:#93a2c6; --acc:#ffd23f; --acc2:#4ea8ff; --ok:#38d39f;
@@ -111,17 +219,241 @@
     h1{font-size:15px}.tab{padding:7px 11px;font-size:12px}
   }
 </style>
+<style>
+  body{display:block}
+  .pg{display:none} .pg.on{display:block}
+  #pg-play main{padding:14px;display:flex;flex-direction:column;gap:14px}
+  #pg-play header{padding:12px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+    border-bottom:1px solid var(--line);position:static;background:none}
+  .nav a.lnk,.brand,.navCta{cursor:pointer}
+</style>
 </head>
 <body>
-<nav class="sitenav"><div class="in">
-  <a class="br" href="index.html">🎹 پیانو <em>استودیو</em></a>
-  <span class="sp"></span>
-  <a href="index.html">خانه</a>
-  <a href="songs.html">آهنگ‌ها</a>
-  <a href="learn.html">آموزش</a>
-  <a href="progress.html">پیشرفت من</a>
-  <a class="on" href="play.html">نواختن</a>
+<nav class="nav"><div class="container">
+  <a class="brand" data-go="home">🎹 پیانو <em>استودیو</em></a>
+  <button class="burger" onclick="document.getElementById('m').classList.toggle('open')">☰</button>
+  <ul id="m">
+    <li><a class="lnk on" data-go="home">خانه</a></li>
+    <li><a class="lnk" data-go="songs">آهنگ‌ها</a></li>
+    <li><a class="lnk" data-go="learn">آموزش</a></li>
+    <li><a class="lnk" data-go="progress">پیشرفت من</a></li>
+    <li><a class="lnk" data-go="play">نواختن</a></li>
+  </ul>
+  <a class="navCta" data-go="play">▶ شروع نواختن</a>
 </div></nav>
+
+<div class="pg on" id="pg-home">
+
+
+<header class="hero"><div class="container">
+  <h1>پیانو بزن، <em>یاد بگیر</em>، لذت ببر</h1>
+  <p>یک استودیوی پیانوی کامل داخل مرورگر. ۲۶ آهنگ معروف با نت واقعی، حالت آموزش که کلیدها را برایت زرد می‌کند،
+     پخش خودکار، ۸ ساز مختلف و یک بخش درام. بدون نصب، بدون ثبت‌نام.</p>
+  <div class="btnRow">
+    <a class="btn gold" href="play.html">🎹 شروع نواختن</a>
+    <a class="btn blue" href="songs.html">🎵 دیدن آهنگ‌ها</a>
+    <a class="btn" href="learn.html">🎓 چطور کار می‌کند؟</a>
+  </div>
+  <div class="miniKeys">
+    <i></i><i class="b"></i><i></i><i class="b"></i><i></i><i></i><i class="b"></i><i></i><i class="b"></i><i></i><i class="b"></i><i></i>
+  </div>
+</div></header>
+
+<section class="blk"><div class="container">
+  <div class="stats">
+    <div class="stat"><b>۲۶</b><span>آهنگ با نت واقعی</span></div>
+    <div class="stat"><b>۸</b><span>ساز مختلف</span></div>
+    <div class="stat"><b>۴</b><span>اکتاو کیبورد</span></div>
+    <div class="stat"><b>∞</b><span>تمرین رایگان</span></div>
+  </div>
+</div></section>
+
+<section class="blk"><div class="container">
+  <h2 class="st">امکانات</h2>
+  <p class="sub">هرچیزی که برای شروع پیانو لازم داری، در یک صفحه.</p>
+  <div class="grid g3">
+    <div class="card"><div class="ico">💡</div><h3>حالت آموزش</h3>
+      <p>کلید <b style="color:#ffd23f">زرد</b> یعنی نتی که باید بزنی و <b style="color:#38d39f">سبز</b> نت بعدی است.
+         خودش نمی‌نوازد — تو می‌زنی و اگر درست باشد خودکار جلو می‌رود.</p></div>
+    <div class="card"><div class="ico">▶️</div><h3>پخش خودکار</h3>
+      <p>اول بگذار آهنگ خودش نواخته شود تا ملودی را بشنوی، سرعت را کم کن و بعد خودت تکرارش کن.</p></div>
+    <div class="card"><div class="ico">🎸</div><h3>هشت ساز</h3>
+      <p>پیانو، پیانوی برقی، گیتار، ارگ، سازهای زهی، زنگ، سینتی‌سایزر و بیس — همه ساخته‌شده با Web Audio.</p></div>
+    <div class="card"><div class="ico">🥁</div><h3>درام و ریتم</h3>
+      <p>هشت پد کوبه‌ای و چهار الگوی ریتم خودکار (راک، پاپ، هیپ‌هاپ، والس) با تنظیم BPM.</p></div>
+    <div class="card"><div class="ico">🎨</div><h3>پیانوی آزاد</h3>
+      <p>هرچه دوست داری بنواز، ضبط کن و دوباره پخش کن. پدال ساستین با کلید Space.</p></div>
+    <div class="card"><div class="ico">📱</div><h3>موبایل و کیبورد</h3>
+      <p>با لمس، ماوس یا کیبورد کامپیوتر. کشیدن انگشت روی کلیدها هم کار می‌کند (گلیساندو).</p></div>
+  </div>
+</div></section>
+
+<section class="blk"><div class="container">
+  <h2 class="st">آهنگ‌های محبوب</h2>
+  <p class="sub">روی هر آهنگ بزن تا مستقیم در حالت آموزش باز شود.</p>
+  <div class="grid g4" id="feat"></div>
+  <div class="btnRow" style="margin-top:26px"><a class="btn" href="songs.html">دیدن همه ۲۶ آهنگ ←</a></div>
+</div></section>
+
+<section class="blk"><div class="container">
+  <h2 class="st">در سه قدم شروع کن</h2>
+  <p class="sub">حتی اگر تا حالا پیانو نزده باشی.</p>
+  <div class="steps" style="max-width:760px;margin:0 auto">
+    <div class="step"><div class="n">۱</div><div><h4>یک آهنگ آسان انتخاب کن</h4>
+      <p>«ستاره کوچولو» یا «سرود شادی» شروع خوبی هستند. یک بار پخش خودکار را بزن و گوش کن.</p></div></div>
+    <div class="step"><div class="n">۲</div><div><h4>حالت آموزش را روشن کن</h4>
+      <p>کلیدی که زرد شده را بزن. درست بود؟ امتیاز می‌گیری و نت بعدی زرد می‌شود. اشتباه بود؟ نت درست را نشانت می‌دهد.</p></div></div>
+    <div class="step"><div class="n">۳</div><div><h4>سرعت را کم کن و تکرار</h4>
+      <p>با اسلایدر سرعت روی ۶۰٪ تمرین کن، بعد کم‌کم بالا ببر تا آهنگ روان شود.</p></div></div>
+  </div>
+  <div class="btnRow" style="margin-top:30px"><a class="btn gold" href="play.html">همین حالا شروع کن 🎹</a></div>
+</div></section>
+
+<footer><div class="container">
+  ساخته‌شده با ❤️ و Web Audio API — بدون نصب، بدون ثبت‌نام.<br>
+  <a href="songs.html">آهنگ‌ها</a> · <a href="learn.html">آموزش</a> · <a href="progress.html">پیشرفت من</a> · <a href="play.html">نواختن</a>
+</div></footer>
+
+
+
+</div>
+<div class="pg" id="pg-songs">
+
+
+<section class="blk" style="border:none;padding-top:44px"><div class="container">
+  <h2 class="st">کتابخانه آهنگ‌ها</h2>
+  <p class="sub">۲۶ آهنگ با نت واقعی. روی هرکدام بزنی، مستقیم در حالت آموزش باز می‌شود.</p>
+  <input class="searchBox" id="q" placeholder="🔍 جست‌وجوی آهنگ…">
+  <div class="filters" id="f"></div>
+  <div class="grid g4" id="list"></div>
+  <p class="sub" id="empty" style="display:none;margin-top:24px">آهنگی پیدا نشد 🤔</p>
+</div></section>
+
+<footer><div class="container">
+  <a href="index.html">خانه</a> · <a href="learn.html">آموزش</a> · <a href="progress.html">پیشرفت من</a> · <a href="play.html">نواختن</a>
+</div></footer>
+
+
+
+</div>
+<div class="pg" id="pg-learn">
+
+
+<section class="blk" style="border:none;padding-top:44px"><div class="container">
+  <h2 class="st">راهنمای کامل</h2>
+  <p class="sub">همه‌چیز درباره‌ی کار با پیانو استودیو.</p>
+
+  <div class="grid g3">
+    <div class="card"><div class="ico">🟡</div><h3>کلید زرد یعنی چه؟</h3>
+      <p>در حالت آموزش، نتی که همین حالا باید بزنی زرد می‌شود. برنامه خودش نمی‌نوازد — منتظر می‌ماند تا تو بزنی.</p></div>
+    <div class="card"><div class="ico">🟢</div><h3>کلید سبز یعنی چه؟</h3>
+      <p>نت بعدی؛ برای اینکه انگشتت را از قبل آماده کنی و ریتم دستت بیاید.</p></div>
+    <div class="card"><div class="ico">🔵</div><h3>کلید آبی یعنی چه؟</h3>
+      <p>کلیدی که همین لحظه فشرده شده. با رها کردن، صدا نرم محو می‌شود.</p></div>
+  </div>
+</div></section>
+
+<section class="blk"><div class="container">
+  <h2 class="st">مسیر یادگیری پیشنهادی</h2>
+  <p class="sub">به ترتیب جلو برو تا سریع‌تر پیشرفت کنی.</p>
+  <div class="steps" style="max-width:800px;margin:0 auto">
+    <div class="step"><div class="n">۱</div><div><h4>گرم کردن — «ستاره کوچولو»</h4>
+      <p>فقط کلیدهای سفید. هدف: عادت کردن به جای انگشت‌ها.
+      <a href="play.html?song=twinkle" style="color:var(--acc2)">شروع ←</a></p></div></div>
+    <div class="step"><div class="n">۲</div><div><h4>ریتم — «سرود شادی»</h4>
+      <p>ملودی ساده اما با کشش‌های متفاوت. سرعت را روی ۷۰٪ بگذار.
+      <a href="play.html?song=joy" style="color:var(--acc2)">شروع ←</a></p></div></div>
+    <div class="step"><div class="n">۳</div><div><h4>کلیدهای سیاه — «آبشار جاذبه»</h4>
+      <p>اولین برخورد جدی با دیِزها و پرش‌های اکتاو.
+      <a href="play.html?song=gf" style="color:var(--acc2)">شروع ←</a></p></div></div>
+    <div class="step"><div class="n">۴</div><div><h4>سرعت — «تتریس» و «سوپر ماریو»</h4>
+      <p>نت‌های کوتاه و پشت‌سرهم؛ تمرین چابکی انگشت.
+      <a href="play.html?song=tetris" style="color:var(--acc2)">شروع ←</a></p></div></div>
+    <div class="step"><div class="n">۵</div><div><h4>چالش — «برای الیز» و «هری پاتر»</h4>
+      <p>ملودی‌های بلند با تغییر اکتاو. اول پخش خودکار، بعد آموزش با سرعت پایین.
+      <a href="play.html?song=elise" style="color:var(--acc2)">شروع ←</a></p></div></div>
+  </div>
+</div></section>
+
+<section class="blk"><div class="container">
+  <h2 class="st">کلیدهای میان‌بر کیبورد</h2>
+  <p class="sub">اگر با کامپیوتر می‌نوازی.</p>
+  <div class="grid g3">
+    <div class="card"><h3>کلیدهای سفید</h3>
+      <p><kbd>Z</kbd><kbd>X</kbd><kbd>C</kbd><kbd>V</kbd><kbd>B</kbd><kbd>N</kbd><kbd>M</kbd> اکتاو پایین<br>
+         <kbd>Q</kbd><kbd>W</kbd><kbd>E</kbd><kbd>R</kbd><kbd>T</kbd><kbd>Y</kbd><kbd>U</kbd> اکتاو بالا</p></div>
+    <div class="card"><h3>کلیدهای سیاه</h3>
+      <p><kbd>S</kbd><kbd>D</kbd><kbd>G</kbd><kbd>H</kbd><kbd>J</kbd> پایین<br>
+         <kbd>2</kbd><kbd>3</kbd><kbd>5</kbd><kbd>6</kbd><kbd>7</kbd> بالا</p></div>
+    <div class="card"><h3>کنترل‌ها</h3>
+      <p><kbd>Space</kbd> پدال ساستین<br><kbd>←</kbd> <kbd>→</kbd> تغییر اکتاو<br>
+         <kbd>1</kbd>…<kbd>8</kbd> پدهای درام (در تب درام)</p></div>
+  </div>
+</div></section>
+
+<section class="blk"><div class="container">
+  <h2 class="st">سؤال‌های پرتکرار</h2>
+  <div class="grid g3">
+    <div class="card"><h3>صدا پخش نمی‌شود؟</h3>
+      <p>مرورگرها تا اولین کلیک صدا را اجازه نمی‌دهند. یک بار روی صفحه کلیک کن یا یک کلید بزن.</p></div>
+    <div class="card"><h3>صدا گیر می‌کند؟</h3>
+      <p>نباید گیر کند؛ هر نت رهاسازی مستقل دارد. اگر باز هم شد، دکمه‌ی «🔇 قطع همه صداها» را بزن.</p></div>
+    <div class="card"><h3>نت‌ها واقعی هستند؟</h3>
+      <p>بله، ملودی هر آهنگ نت‌به‌نت وارد شده و با فرکانس استاندارد (A4=440Hz) نواخته می‌شود.</p></div>
+    <div class="card"><h3>روی موبایل کار می‌کند؟</h3>
+      <p>بله. کیبورد اسکرول افقی دارد و لمس چند‌انگشتی پشتیبانی می‌شود.</p></div>
+    <div class="card"><h3>می‌توانم ضبط کنم؟</h3>
+      <p>در تب «پیانوی آزاد» دکمه‌ی ضبط را بزن، بنواز و بعد پخش کن.</p></div>
+    <div class="card"><h3>اینترنت لازم است؟</h3>
+      <p>خیر، همه صداها داخل مرورگر ساخته می‌شوند؛ هیچ فایل صوتی دانلود نمی‌شود.</p></div>
+  </div>
+  <div class="btnRow" style="margin-top:32px"><a class="btn gold" href="play.html">بریم بنوازیم 🎹</a></div>
+</div></section>
+
+<footer><div class="container">
+  <a href="index.html">خانه</a> · <a href="songs.html">آهنگ‌ها</a> · <a href="progress.html">پیشرفت من</a> · <a href="play.html">نواختن</a>
+</div></footer>
+</div>
+<div class="pg" id="pg-progress">
+
+
+<section class="blk" style="border:none;padding-top:44px"><div class="container">
+  <h2 class="st">پیشرفت من</h2>
+  <p class="sub">هر آهنگی که در حالت آموزش تمام کنی اینجا ثبت می‌شود (روی همین مرورگر ذخیره می‌شود).</p>
+  <div class="bigbar"><i id="progBar"></i></div>
+  <div class="stats" style="margin-top:26px">
+    <div class="stat"><b id="sDone">۰</b><span>آهنگ تمام‌شده</span></div>
+    <div class="stat"><b id="sPlays">۰</b><span>مجموع تمرین‌ها</span></div>
+    <div class="stat"><b id="sAvg">۰٪</b><span>میانگین دقت</span></div>
+    <div class="stat"><b id="sPerf">۰</b><span>اجرای بی‌نقص</span></div>
+  </div>
+</div></section>
+
+<section class="blk"><div class="container">
+  <h2 class="st">نشان‌ها</h2>
+  <p class="sub">با تمرین بیشتر بازشان کن.</p>
+  <div class="grid g4" id="medals"></div>
+</div></section>
+
+<section class="blk"><div class="container">
+  <h2 class="st">وضعیت آهنگ‌ها</h2>
+  <p class="sub">آهنگ‌های ناتمام را ادامه بده.</p>
+  <div class="grid g4" id="progList"></div>
+  <div class="btnRow" style="margin-top:28px">
+    <a class="btn gold" href="play.html">ادامه‌ی تمرین 🎹</a>
+    <button class="btn" id="progReset">🗑 پاک کردن پیشرفت</button>
+  </div>
+</div></section>
+
+<footer><div class="container">
+  <a href="index.html">خانه</a> · <a href="songs.html">آهنگ‌ها</a> · <a href="learn.html">آموزش</a> · <a href="play.html">نواختن</a>
+</div></footer>
+
+
+
+</div>
+<div class="pg" id="pg-play">
+
 <header>
   <h1>🎹 پیانو <span>استودیو</span></h1>
   <div class="tabs">
@@ -233,6 +565,111 @@
     <div class="kbWrap"><div class="kb" id="kb"></div></div>
   </div>
 </main>
+
+</div>
+
+<script>/* فهرست آهنگ‌ها برای صفحات سایت (id ها با play.html یکی است) */
+window.CATALOG=[
+ {id:'gf',        name:'آبشار جاذبه',            info:'Gravity Falls — تم سریال', cat:'کارتون',  dif:'m', ico:'🌲'},
+ {id:'elise',     name:'برای الیز',              info:'Für Elise — بتهوون',        cat:'کلاسیک', dif:'h', ico:'🎼'},
+ {id:'hp',        name:'هری پاتر',               info:"Hedwig's Theme",            cat:'فیلم',   dif:'h', ico:'⚡'},
+ {id:'pirates',   name:'دزدان دریایی کارائیب',   info:"He's a Pirate",             cat:'فیلم',   dif:'h', ico:'🏴‍☠️'},
+ {id:'tetris',    name:'تتریس',                  info:'Korobeiniki',               cat:'بازی',   dif:'m', ico:'🧩'},
+ {id:'joy',       name:'سرود شادی',              info:'Ode to Joy — بتهوون',       cat:'کلاسیک', dif:'e', ico:'🎉'},
+ {id:'twinkle',   name:'ستاره کوچولو',           info:'Twinkle Twinkle',           cat:'کودکانه',dif:'e', ico:'⭐'},
+ {id:'birthday',  name:'تولدت مبارک',            info:'Happy Birthday',            cat:'کودکانه',dif:'e', ico:'🎂'},
+ {id:'river',     name:'River Flows in You',     info:'یی‌روما',                   cat:'مدرن',   dif:'m', ico:'🌊'},
+ {id:'canon',     name:'کانن در ر',              info:'Canon in D — پاخلبل',       cat:'کلاسیک', dif:'m', ico:'💐'},
+ {id:'jingle',    name:'جینگل بلز',              info:'Jingle Bells',              cat:'کودکانه',dif:'e', ico:'🔔'},
+ {id:'lion',      name:'شیرشاه',                 info:'Circle of Life',            cat:'کارتون', dif:'m', ico:'🦁'},
+ {id:'godfather', name:'پدرخوانده',              info:'The Godfather — تم عشق',    cat:'فیلم',   dif:'m', ico:'🎩'},
+ {id:'titanic',   name:'تایتانیک',               info:'My Heart Will Go On',       cat:'فیلم',   dif:'m', ico:'🚢'},
+ {id:'undertale', name:'Megalovania',            info:'Undertale',                 cat:'بازی',   dif:'h', ico:'💀'},
+ {id:'mario',     name:'سوپر ماریو',             info:'Super Mario Bros',          cat:'بازی',   dif:'m', ico:'🍄'},
+ {id:'nokia',     name:'زنگ نوکیا',              info:'Nokia Tune',                cat:'مدرن',   dif:'e', ico:'📱'},
+ {id:'interstellar',name:'میان‌ستاره‌ای',        info:'Interstellar — هانس زیمر',  cat:'فیلم',   dif:'m', ico:'🚀'},
+ {id:'zelda',     name:'لالایی زلدا',            info:"Zelda's Lullaby — نینتندو", cat:'بازی',   dif:'m', ico:'🗡️'},
+ {id:'moonlight', name:'سونات مهتاب',            info:'بتهوون — آرپژ',             cat:'کلاسیک', dif:'h', ico:'🌙'},
+ {id:'imperial',  name:'مارش امپراتوری',         info:'Star Wars — دارث ویدر',     cat:'فیلم',   dif:'h', ico:'🌑'},
+ {id:'aval',      name:'آملی',                   info:"Comptine d'un autre été",   cat:'مدرن',   dif:'h', ico:'☕'},
+ {id:'ff7',       name:'Final Fantasy VII',      info:'تم اصلی',                   cat:'بازی',   dif:'m', ico:'⚔️'},
+ {id:'sadness',   name:'حس تنهایی',              info:'ناروتو — Sadness & Sorrow', cat:'کارتون', dif:'m', ico:'🍥'},
+ {id:'fly',       name:'Fly Me to the Moon',     info:'جاز کلاسیک',                cat:'مدرن',   dif:'m', ico:'🌕'},
+ {id:'ode2',      name:'گل یاس (Greensleeves)',  info:'فولک انگلیسی',              cat:'کلاسیک', dif:'m', ico:'🌿'}
+];
+window.DIFN={e:'آسان',m:'متوسط',h:'سخت'};
+</script>
+<script>(function(){
+document.getElementById('feat').innerHTML=CATALOG.filter(s=>
+  ['gf','elise','hp','tetris','river','mario','titanic','twinkle'].includes(s.id))
+  .map(s=>`<a class="songCard" href="play.html?song=${s.id}">
+     <b>${s.ico} ${s.name}</b><small>${s.info}</small>
+     <div class="tagRow"><span class="tag">${s.cat}</span><span class="tag ${s.dif}">${DIFN[s.dif]}</span></div></a>`).join('');
+})();</script>
+<script>(function(){
+const cats=['همه',...new Set(CATALOG.map(s=>s.cat)),'آسان','متوسط','سخت'];
+let active='همه', term='';
+const fEl=document.getElementById('f');
+fEl.innerHTML=cats.map(c=>`<button data-c="${c}"${c===active?' class="on"':''}>${c}</button>`).join('');
+fEl.onclick=e=>{ if(e.target.dataset.c){active=e.target.dataset.c;
+  [...fEl.children].forEach(b=>b.classList.toggle('on',b.dataset.c===active)); render();}};
+document.getElementById('q').oninput=e=>{term=e.target.value.trim().toLowerCase();render();};
+function render(){
+  const out=CATALOG.filter(s=>{
+    const okC = active==='همه' || s.cat===active || DIFN[s.dif]===active;
+    const okT = !term || (s.name+' '+s.info).toLowerCase().includes(term);
+    return okC&&okT;
+  });
+  document.getElementById('empty').style.display=out.length?'none':'block';
+  document.getElementById('list').innerHTML=out.map(s=>`
+    <a class="songCard" href="play.html?song=${s.id}">
+      <b>${s.ico} ${s.name}</b><small>${s.info}</small>
+      <div class="tagRow"><span class="tag">${s.cat}</span><span class="tag ${s.dif}">${DIFN[s.dif]}</span></div>
+    </a>`).join('');
+}
+render();
+})();</script>
+<script>(function(){
+const PKEY='pianoStudioProgress';
+const fa=n=>String(n).replace(/\d/g,d=>'۰۱۲۳۴۵۶۷۸۹'[d]);
+function load(){ try{return JSON.parse(localStorage.getItem(PKEY))||{}}catch(e){return {}} }
+function render(){
+  const p=load();
+  const rows=CATALOG.map(s=>({s,r:p[s.id]}));
+  const done=rows.filter(x=>x.r);
+  const plays=done.reduce((a,x)=>a+(x.r.plays||0),0);
+  const avg=done.length?Math.round(done.reduce((a,x)=>a+(x.r.best||0),0)/done.length):0;
+  const perf=done.filter(x=>x.r.best>=100).length;
+
+  document.getElementById('progBar').style.width=(done.length/CATALOG.length*100)+'%';
+  document.getElementById('sDone').textContent=fa(done.length);
+  document.getElementById('sPlays').textContent=fa(plays);
+  document.getElementById('sAvg').textContent=fa(avg)+'٪';
+  document.getElementById('sPerf').textContent=fa(perf);
+
+  const MED=[
+    {e:'🌱',n:'اولین قدم',d:'یک آهنگ را تمام کن',ok:done.length>=1},
+    {e:'🎵',n:'نوازنده',d:'۳ آهنگ را تمام کن',ok:done.length>=3},
+    {e:'🎼',n:'حرفه‌ای',d:'۱۰ آهنگ را تمام کن',ok:done.length>=10},
+    {e:'👑',n:'استاد',d:'همه آهنگ‌ها را تمام کن',ok:done.length>=CATALOG.length},
+    {e:'💎',n:'بی‌نقص',d:'یک آهنگ با دقت ۱۰۰٪',ok:perf>=1},
+    {e:'🔥',n:'سخت‌کوش',d:'۲۰ بار تمرین',ok:plays>=20},
+    {e:'🎯',n:'دقیق',d:'میانگین دقت بالای ۹۰٪',ok:avg>=90&&done.length>=3},
+    {e:'⚔️',n:'شکارچی چالش',d:'یک آهنگ سخت را تمام کن',ok:done.some(x=>x.s.dif==='h')}
+  ];
+  document.getElementById('medals').innerHTML=MED.map(m=>
+    `<div class="medal${m.ok?' got':''}"><span class="e">${m.e}</span><b>${m.n}</b><small>${m.d}</small></div>`).join('');
+
+  document.getElementById('progList').innerHTML=rows.map(({s,r})=>`
+    <a class="songCard" href="play.html?song=${s.id}">
+      <b>${s.ico} ${s.name}</b><small>${s.info}</small>
+      <div class="tagRow"><span class="tag ${s.dif}">${DIFN[s.dif]}</span>
+      ${r?`<span class="tag" style="color:#38d39f;border-color:#1e5c46">✅ ${fa(r.best)}٪ • ${fa(r.plays)} بار</span>`
+         :'<span class="tag">هنوز تمام نشده</span>'}</div>
+    </a>`).join('');
+}
+document.getElementById('progReset').onclick=()=>{ if(confirm('همه پیشرفت پاک شود؟')){localStorage.removeItem(PKEY);render();} };
+window.renderProgress=render; render();})();</script>
 
 <script>
 /* ================= AUDIO ENGINE ================= */
@@ -831,5 +1268,34 @@ buildKB(); paintProgress();
   if(want){ setTimeout(()=>{ $('btnTeach').click(); },200); }
 })();
 </script>
-</body>
-</html>
+<script>
+window.stopAllX = stopAll;
+window.openSong = function(id){
+  var i = SONGS.findIndex(function(s){ return s.id===id; });
+  if(i<0) return;
+  selectSong(i);
+  var el = listEl.children[i];
+  if(el && el.scrollIntoView) el.scrollIntoView({block:'nearest'});
+  setTimeout(function(){ document.getElementById('btnTeach').click(); }, 250);
+};
+function go(p, song){
+  document.querySelectorAll('.pg').forEach(function(x){ x.classList.toggle('on', x.id==='pg-'+p); });
+  document.querySelectorAll('.nav .lnk').forEach(function(a){ a.classList.toggle('on', a.dataset.go===p); });
+  document.getElementById('m').classList.remove('open');
+  window.scrollTo(0,0);
+  if(p!=='play') window.stopAllX();
+  if(p==='progress' && window.renderProgress) window.renderProgress();
+  if(p==='play'){ buildKB(); paintProgress(); if(song) window.openSong(song); }
+}
+document.addEventListener('click', function(e){
+  var a = e.target.closest('[data-go]');
+  if(a){ e.preventDefault(); go(a.dataset.go); return; }
+  var s = e.target.closest('a[href*="play.html?song="]');
+  if(s){ e.preventDefault(); go('play', s.getAttribute('href').split('song=')[1]); return; }
+  var l = e.target.closest('a[href$=".html"]');
+  if(l){ var f = l.getAttribute('href').replace('.html','');
+          e.preventDefault(); go(f==='index' ? 'home' : f); }
+});
+if(window.renderProgress) window.renderProgress();
+</script>
+</body></html>
